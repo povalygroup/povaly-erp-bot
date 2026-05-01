@@ -2,7 +2,14 @@
 nixPkgs = ["python311"]
 
 [phases.install]
-cmds = ["pip install -r requirements.txt"]
+cmds = [
+  "pip install --upgrade pip",
+  "pip install -r requirements.txt"
+]
 
 [start]
-cmd = "PYTHONPATH=/app python -m src.main"
+cmd = "python -m src.main"
+
+[variables]
+PYTHONUNBUFFERED = "1"
+PYTHONPATH = "/app"
