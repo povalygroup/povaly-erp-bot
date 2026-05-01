@@ -1,0 +1,109 @@
+📋 TASK ALLOCATION GUIDE
+
+� FOR ADMINISTRATORS / MANAGERS / OWNERS
+
+🎯 CREATE & ASSIGN TASKS
+
+�📌 QUICK METHOD (Recommended):
+1. Type: /newtask
+2. Select brand from menu
+3. Copy pre-filled template
+4. Edit assignee, task, deadline, resources
+5. Send in this topic
+
+✅ Auto-includes: Unique ticket ID + Brand + All fields
+📝 MANUAL FORMAT:
+
+[TICKET] (leave blank, auto-generated)
+[BRAND] #VorosaBajar (mostly avoid manual add as it will help auto ticket generation, follow the below rules to easily add brand name)
+[TASK] Product page SEO optimization
+[ASSIGNEE] @username
+[DEADLINE] 28 Apr 2026 | 6:00 PM GMT+6
+[RESOURCES] Google Doc Link
+
+Required: [TICKET], [ASSIGNEE]
+Optional: [BRAND], [TASK], [DEADLINE], [RESOURCES]
+
+Follow these rules to add [BRAND] easily:
+• Type # to see brand list
+• Type # with brand code: #VRB, #POV, #GSM
+• Type full name: VorosaBajar
+
+Example:
+[TICKET]
+[BRAND] #VRB
+[TASK] Update homepage banner
+[ASSIGNEE] @john.doe
+[DEADLINE] 30 Apr 2026 | 5:00 PM GMT+6
+
+👥 ASSIGNMENT OPTIONS:
+
+Single: [ASSIGNEE] @john.doe
+Multiple: [ASSIGNEE] @john.doe, @jane.smith, @mike.wilson
+Team: [ASSIGNEE] @team or @all-employees
+🔢 TICKET FORMAT: BRANDYYMM##
+
+POV260401 → Povaly, April 2026, Task #01
+VRB260515 → VorosaBajar, May 2026, Task #15
+GSM260203 → GSMAura, February 2026, Task #03
+
+Brand Codes: POV=Povaly | VRB=VorosaBajar | GSM=GSMAura
+Note: Auto-generated when using /newtask
+
+
+📌 PIN MESSAGES:
+
+Quick: Type /pin or [PINNED]
+Custom: [PINNED] Your announcement here
+
+📄 Full pinning guide: docs/PINNING_INSTRUCTIONS.txt
+👷 FOR EMPLOYEES
+
+
+📝 YOUR WORKFLOW:
+
+STEP 1 - Acknowledge Task:
+When assigned, react with 👍 on the task message
+→ Confirms receipt | Marks presence | Indicates work started
+
+STEP 2 - Complete Work:
+Finish the task according to requirements and deadline
+
+STEP 3 - Submit for Review:
+When complete, go to QA Review topic and submit there
+
+⚠️ Important:
+• Only react 👍 to tasks assigned to YOU (@mention)
+• Follow the deadline set by manager
+• Work complete? Submit in QA Review topic
+
+
+⚡ COMMANDS
+
+/newtask - Create task template
+/brand - Show brand list
+/taskhelp - Quick reference
+/help - Full command list
+
+⚠️ TOPIC RULES
+
+✓ DO:
+• Post task allocation messages only
+• Use /newtask for templates
+• Include @mention for assignee
+• Follow format exactly
+• One task per message
+
+✗ DON'T:
+• Post non-task messages
+• Modify task format
+• Skip required fields
+
+Violations: Malformed messages auto-deleted + DM with instructions
+
+
+❓ NEED HELP?
+
+Task unclear or issues? → Use /support in Core Operations topic
+Follow the rules there for assistance
+

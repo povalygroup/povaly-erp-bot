@@ -1,0 +1,170 @@
+📌 CORE OPERATIONS — STANDARD OPERATING PROTOCOL (SOP)
+━━━━━━━━━━━━━━━━━━━━
+
+🎯 PURPOSE
+This topic is the structured issue-resolution hub of Povaly Group. All execution-related issues, technical problems, and operational blockers must be reported and resolved here in a strict system.
+
+🔐 ACCESS CONTROL
+👑 Authorized Participants:
+• Chairman
+• CEO  
+• Administrative Managers
+• Assigned Team Members
+
+👤 Usage: All members
+🚫 No casual chat or unrelated discussion allowed
+
+🧩 CORE FUNCTION
+Used strictly for:
+• Task-related issue reporting
+• Technical debugging
+• Requirement clarification
+• Execution support
+• Cross-team coordination
+
+📌 ISSUE ENTRY FORMAT (MANDATORY)
+Every issue must be posted in this exact structure:
+
+[TICKET] #POV-XXXX-XX (existing task ticket)
+[ISSUE] Short title
+[DETAILS] Clear explanation
+[PRIORITY] LOW / MEDIUM / HIGH / CRITICAL
+[ASSIGNEE] @username (optional)
+
+**IMPORTANT:** The [TICKET] field must contain the ticket ID of an existing task that has the problem. Issues are for reporting problems with existing work, not creating new work items.
+
+🔄 REACTION-BASED ISSUE SYSTEM
+Reactions define system state:
+
+👍 = CLAIM (user is handling issue)
+❤️ = RESOLVED (final completion)
+👎 = INVALID / WRONG ISSUE
+
+Rules:
+• First 👍 = primary handler (store ownership)
+• Multiple 👍 allowed (collaboration)
+• ❤️ marks final resolution
+• Only reactions control status (not text)
+
+💬 DISCUSSION SYSTEM (STRICT)
+• All replies must be under the original issue message
+• No new messages for same issue
+• No DM-based problem solving
+• Thread = single source of truth
+
+🤖 AUTOMATION LOGIC
+
+On 👍 reaction:
+→ store user as issue handler
+→ mark issue as IN_PROGRESS
+
+On ❤️ reaction:
+→ mark issue as RESOLVED
+→ lock issue state
+→ send DM to issue creator:
+   Message: "Issue [TICKET] has been resolved. Please review and continue your workflow."
+
+On 👎 reaction:
+→ mark issue as INVALID (remind the issuer for this reject of issue, who rejects that also in that message)
+
+⏱️ ISSUE ESCALATION SYSTEM (REQUIRED)
+Implement time-based escalation:
+
+Condition:
+• Issue has NO ❤️ (not resolved)
+• AND no activity or resolution within defined time (e.g., 2 hours or configurable)
+
+Then:
+Bot must send a message to ADMIN CONTROL PANEL topic with:
+
+[TICKET] #POV-XXXX-XX
+[STATUS] NOT RESOLVED
+[ISSUE] Short title
+[ASSIGNEE] @username
+[TIME_ELAPSED] X hours
+
+Message: "This issue has not been resolved within the expected time. Immediate attention required."
+
+Rules:
+• Escalation must trigger only once per issue (avoid spam)
+• If 👍 exists but no ❤️ → still eligible for escalation
+• If no 👍 → mark as UNATTENDED in escalation
+• If issue later gets ❤️ → no further escalation
+
+⚙️ COMMAND SYSTEM (REQUIRED)
+Implement these commands:
+
+/myissues
+Returns all issues claimed (👍) by the user:
+OPEN ISSUES #POV-XXXX-XX → issue title
+
+/openissues
+Returns all unresolved issues:
+• no ❤️ reaction
+• still active
+
+/issue #TICKET
+Returns full issue details + direct message link
+
+/close #TICKET
+• bot finds issue
+• applies ❤️ reaction automatically
+• marks RESOLVED
+• triggers DM to creator
+
+/unresolved
+List issues:
+• claimed but not resolved
+• sorted by time
+
+/inactive
+List issues:
+• no 👍 reaction after creation
+
+⏱️ AUTO REMINDER SYSTEM
+If user claimed issue (👍) but no ❤️ within defined time:
+Send reminder: "You have unresolved issues: #POV-XXXX-XX"
+
+🚫 WHAT DOES NOT BELONG HERE
+❌ Task assignment → Task Allocation
+❌ Final submission → QA & Review
+❌ Asset storage → Brand Repository
+❌ Official decisions → Official Directives
+❌ Casual conversation → Team Lounge
+
+⚠️ ENFORCEMENT RULES
+❗ Invalid format → ignored
+❗ Non-reply discussion → invalid
+❗ Duplicate issue → reject
+❗ Must use TICKET for tracking
+❗ All logic must rely on reactions
+
+🏛 SYSTEM ROLE
+Core Operations is a structured issue-resolution engine.
+
+It:
+• tracks problems
+• assigns ownership
+• enables discussion
+• records resolution
+
+It does NOT:
+• assign tasks
+• approve work
+• store outputs
+
+🧠 FINAL DESIGN RULE
+One issue = One message
+One message = One thread
+One thread = One resolution
+
+No duplication. No fragmentation.
+
+⚙️ TECHNICAL REQUIREMENTS
+• Parse [TICKET] from messages
+• Track Telegram reactions in real-time
+• Store issue state in database
+• Support high message volume (1000+)
+• Map reactions → system state
+• Support command-based retrieval
+• Support timed escalation system
