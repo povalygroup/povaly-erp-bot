@@ -18,8 +18,17 @@ logger = logging.getLogger(__name__)
 async def main() -> None:
     """Main application entry point."""
     try:
-        # Setup logging
+        # Setup logging with immediate flush
         setup_logging()
+        
+        # Force stdout to be unbuffered for Railway logs
+        sys.stdout.reconfigure(line_buffering=True)
+        sys.stderr.reconfigure(line_buffering=True)
+        
+        print("=" * 60, flush=True)
+        print("🚀 TELEGRAM BOT STARTING...", flush=True)
+        print("=" * 60, flush=True)
+        
         logger.info("Starting Telegram Operations Automation System...")
         
         # Load configuration
@@ -47,11 +56,13 @@ async def main() -> None:
         
         # Start the bot
         logger.info("Starting bot...")
-        logger.info(f"Bot is now running. Press Ctrl+C to stop.")
+        print("✅ Bot initialization complete", flush=True)
         
         # Run the bot until Ctrl+C is pressed
         await application.initialize()
         await application.start()
+        
+        print("✅ Bot started successfully", flush=True)
         
         # Start escalation service
         escalation_service = application.bot_data.get("escalation_service")
@@ -102,9 +113,18 @@ async def main() -> None:
             await report_service.start()
             logger.info("Report service started")
         
+        print("✅ All services started", flush=True)
+        print("🤖 Bot is now polling for messages...", flush=True)
+        
         await application.updater.start_polling(
-            allowed_updates=["message", "message_reaction", "callback_query"]
+            allowed_updates=["message", "message_reaction", "callback_query"],
+            drop_pending_updates=True
         )
+        
+        print("=" * 60, flush=True)
+        print("✅ BOT IS NOW RUNNING 24/7", flush=True)
+        print("=" * 60, flush=True)
+        logger.info(f"Bot is now running. Press Ctrl+C to stop.")
         
         # Keep the bot running
         stop_event = asyncio.Event()
@@ -180,6 +200,7 @@ async def main() -> None:
         logger.info("Received keyboard interrupt, shutting down...")
     except Exception as e:
         logger.exception(f"Fatal error: {e}")
+        print(f"❌ FATAL ERROR: {e}", flush=True)
         sys.exit(1)
 
 
@@ -191,6 +212,7 @@ def run():
         logger.info("Application stopped by user")
     except Exception as e:
         logger.exception(f"Application failed: {e}")
+        print(f"❌ APPLICATION FAILED: {e}", flush=True)
         sys.exit(1)
 
 
