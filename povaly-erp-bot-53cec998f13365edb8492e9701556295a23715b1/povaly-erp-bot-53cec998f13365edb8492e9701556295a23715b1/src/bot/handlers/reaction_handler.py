@@ -11,38 +11,6 @@ from src.data.models.task import TaskState
 logger = logging.getLogger(__name__)
 
 
-async def send_invalid_reaction_warning(context, user_id, emoji, entity_type, entity_id, reason, message_link=None):
-    """
-    Send DM to user explaining why their reaction was invalid.
-    
-    Args:
-        context: Bot context
-        user_id: User who added the invalid reaction
-        emoji: The reaction emoji that was invalid
-        entity_type: Type of entity (task, QA submission, etc.)
-        entity_id: ID of the entity (ticket number)
-        reason: Explanation of why it was invalid
-        message_link: Optional link to the message
-    """
-    try:
-        from src.utils.message_utils import send_auto_delete_dm
-        
-        message_text = f"❌ **Invalid Reaction**\n\nYour {emoji} reaction on {entity_type} **{entity_id}** was not processed.\n\n**Reason:** {reason}"
-        
-        if message_link:
-            message_text += f"\n\n[📎 View Message]({message_link})\n\n**Action Required:** Please remove your {emoji} reaction from the message by clicking it again."
-        
-        await send_auto_delete_dm(
-            context=context,
-            user_id=user_id,
-            text=message_text,
-            delete_after_seconds=30
-        )
-        logger.info(f"✉️ Sent invalid reaction warning to user {user_id} for {emoji} on {entity_type} {entity_id}")
-    except Exception as e:
-        logger.warning(f"Failed to send invalid reaction warning to user {user_id}: {e}")
-
-
 async def handle_reaction_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Handle reaction updates for both tasks and issues.
@@ -243,31 +211,7 @@ async def handle_reaction_update(update: Update, context: ContextTypes.DEFAULT_T
             else:
                 logger.info(f"❌ No admin alert found for message {message_id}")
         
-        # Try to find leave request (Attendance & Leave topic)
-        attendance_repo = context.bot_data.get('attendance_repository')
-        if attendance_repo:
-            # Search for leave request by message_id
-            try:
-                all_pending = await attendance_repo.get_pending_leave_requests()
-                leave_request = None
-                for req in all_pending:
-                    if req.message_id == message_id:
-                        leave_request = req
-                        break
-                
-                if leave_request:
-                    logger.info(f"✅ Found leave request for message {message_id}")
-                    await process_leave_reactions(
-                        leave_request, user_id, added_reactions, removed_reactions,
-                        attendance_repo, context, config
-                    )
-                    return
-                else:
-                    logger.debug(f"❌ No leave request found for message {message_id}")
-            except Exception as e:
-                logger.warning(f"Error checking for leave request: {e}")
-        
-        logger.warning(f"⚠️ No task, issue, QA submission, admin alert, or leave request found for message {message_id}")
+        logger.warning(f"⚠️ No task, issue, or QA submission found for message {message_id}")
         
     except Exception as e:
         logger.error(f"Error handling reaction update: {e}", exc_info=True)
@@ -284,14 +228,6 @@ async def process_task_reactions(task, user_id, added_reactions, removed_reactio
     - 👎: QA_SUBMITTED → REJECTED (QA reviewer)
     - 🔥: Add exemption flag (admin/manager only)
     """
-    
-    # Build message link for warnings
-    group_id_str = str(config.TELEGRAM_GROUP_ID)
-    if group_id_str.startswith('-100'):
-        group_id_clean = group_id_str[4:]
-    else:
-        group_id_clean = group_id_str
-    task_link = f"https://t.me/c/{group_id_clean}/{config.TOPIC_TASK_ALLOCATION}/{task.message_id}"
     
     # Process added reactions
     for emoji in added_reactions:
@@ -373,10 +309,8 @@ async def process_task_reactions(task, user_id, added_reactions, removed_reactio
                                     )
                                     
                                     # Send DM confirmation
-                                    from src.utils.message_utils import send_auto_delete_dm
-                                    await send_auto_delete_dm(
-                                        context=context,
-                                        user_id=user_id,
+                                    await context.bot.send_message(
+                                        chat_id=user_id,
                                         text=f"""✅ **Check-in Recorded**
 
 **Time:** {time_str}
@@ -384,7 +318,7 @@ async def process_task_reactions(task, user_id, added_reactions, removed_reactio
 **Date:** {today.strftime('%Y-%m-%d')}
 
 Have a productive day!""",
-                                        delete_after_seconds=60
+                                        parse_mode='Markdown'
                                     )
                                     
                                     logger.info(f"✅ Auto check-in recorded for user {user_id} (@{username}) at {time_str} (late={is_late})")
@@ -397,18 +331,8 @@ Have a productive day!""",
                             logger.warning(f"Failed to transition {task.ticket} to STARTED")
                     else:
                         logger.warning(f"User {user_id} is not assignee of task {task.ticket}")
-                        await send_invalid_reaction_warning(
-                            context, user_id, "👍", "task", f"#{task.ticket}",
-                            f"Only the task assignee can start the task.\n\nThis task is assigned to user ID: {task.assignee_id}",
-                            task_link
-                        )
                 else:
                     logger.debug(f"Task {task.ticket} not in ASSIGNED state (current: {task.state})")
-                    await send_invalid_reaction_warning(
-                        context, user_id, "👍", "task", f"#{task.ticket}",
-                        f"This reaction only works when task is in ASSIGNED state.\n\nCurrent state: **{task.state.value}**\n\nThe 👍 reaction is used to start working on a task.",
-                        task_link
-                    )
             
             elif emoji == "❤️":
                 # Two scenarios for heart reaction:
@@ -418,34 +342,18 @@ Have a productive day!""",
                 if task.state == TaskState.QA_SUBMITTED:
                     # QA reviewer approving the task
                     if user_id in config.QA_REVIEWERS:
-                        # Check for blocking tasks
-                        blocking_tasks = await task_service.task_repo.get_blocking_tasks(task.ticket)
-                        if blocking_tasks:
-                            logger.warning(f"Task {task.ticket} has blocking tasks: {blocking_tasks}")
-                            blocking_list = ", ".join([f"#{t}" for t in blocking_tasks])
-                            await send_invalid_reaction_warning(
-                                context, user_id, "❤️", "task", f"#{task.ticket}",
-                                f"❌ **Task is Blocked**\n\nThis task cannot be approved because it is blocked by:\n{blocking_list}\n\nPlease resolve the blocking tasks first, then try again.",
-                                task_link
+                        success = await task_service.state_engine.process_heart_reaction(
+                            task.ticket, user_id, datetime.now()
+                        )
+                        if success:
+                            logger.info(f"✅ Task {task.ticket} transitioned to APPROVED by {user_id}")
+                            await task_service.task_repo.add_reaction(
+                                task.ticket, emoji, user_id, task.message_id, task.topic_id
                             )
                         else:
-                            success = await task_service.state_engine.process_heart_reaction(
-                                task.ticket, user_id, datetime.now()
-                            )
-                            if success:
-                                logger.info(f"✅ Task {task.ticket} transitioned to APPROVED by {user_id}")
-                                await task_service.task_repo.add_reaction(
-                                    task.ticket, emoji, user_id, task.message_id, task.topic_id
-                                )
-                            else:
-                                logger.warning(f"Failed to transition {task.ticket} to APPROVED")
+                            logger.warning(f"Failed to transition {task.ticket} to APPROVED")
                     else:
                         logger.warning(f"User {user_id} is not a QA reviewer")
-                        await send_invalid_reaction_warning(
-                            context, user_id, "❤️", "task", f"#{task.ticket}",
-                            "Only authorized QA reviewers can approve QA submissions.\n\nYou are not in the QA reviewers list.\n\nPlease contact an administrator if you should have QA review access.",
-                            task_link
-                        )
                 
                 elif task.state == TaskState.APPROVED:
                     # Assignee confirming task completion
@@ -458,30 +366,18 @@ Have a productive day!""",
                         
                         # Send confirmation to assignee
                         try:
-                            from src.utils.message_utils import send_auto_delete_dm
-                            await send_auto_delete_dm(
-                                context=context,
-                                user_id=user_id,
+                            await context.bot.send_message(
+                                chat_id=user_id,
                                 text=f"✅ **Completion Confirmed**\n\nYou've marked task **#{task.ticket}** as complete.\n\nThe task will be automatically archived within 24 hours.\n\nThank you for your work!",
-                                delete_after_seconds=60
+                                parse_mode='Markdown'
                             )
                         except Exception as e:
                             logger.warning(f"Failed to send completion confirmation: {e}")
                     else:
                         logger.warning(f"User {user_id} is not the assignee of task {task.ticket}")
-                        await send_invalid_reaction_warning(
-                            context, user_id, "❤️", "task", f"#{task.ticket}",
-                            f"Only the task assignee can confirm completion.\n\nThis task is assigned to user ID: {task.assignee_id}",
-                            task_link
-                        )
                 
                 else:
                     logger.debug(f"Task {task.ticket} not in QA_SUBMITTED or APPROVED state (current: {task.state})")
-                    await send_invalid_reaction_warning(
-                        context, user_id, "❤️", "task", f"#{task.ticket}",
-                        f"This reaction only works when:\n• Task is in **QA_SUBMITTED** state (for QA reviewers to approve)\n• Task is in **APPROVED** state (for assignees to confirm completion)\n\nCurrent state: **{task.state.value}**\n\nTo mark this task complete, please submit it for QA review first using `/submitqa` command.",
-                        task_link
-                    )
             
             elif emoji == "👎":
                 # Transition QA_SUBMITTED → REJECTED
@@ -500,18 +396,8 @@ Have a productive day!""",
                             logger.warning(f"Failed to transition {task.ticket} to REJECTED")
                     else:
                         logger.warning(f"User {user_id} is not a QA reviewer")
-                        await send_invalid_reaction_warning(
-                            context, user_id, "👎", "task", f"#{task.ticket}",
-                            "Only authorized QA reviewers can reject QA submissions.\n\nYou are not in the QA reviewers list.\n\nPlease contact an administrator if you should have QA review access.",
-                            task_link
-                        )
                 else:
                     logger.debug(f"Task {task.ticket} not in QA_SUBMITTED state (current: {task.state})")
-                    await send_invalid_reaction_warning(
-                        context, user_id, "👎", "task", f"#{task.ticket}",
-                        f"This reaction only works when task is in **QA_SUBMITTED** state.\n\nCurrent state: **{task.state.value}**\n\nThe 👎 reaction is used by QA reviewers to reject QA submissions.",
-                        task_link
-                    )
             
             elif emoji == "🔥":
                 # Add fire exemption (admin/manager only)
@@ -528,11 +414,6 @@ Have a productive day!""",
                         logger.warning(f"Failed to add exemption to {task.ticket}")
                 else:
                     logger.warning(f"User {user_id} not authorized for fire exemption")
-                    await send_invalid_reaction_warning(
-                        context, user_id, "🔥", "task", f"#{task.ticket}",
-                        "Only Administrators and Managers can add fire exemptions to tasks.\n\nYou do not have the required permissions.\n\nPlease contact an administrator if this task needs urgent attention.",
-                        task_link
-                    )
         
         except Exception as e:
             logger.error(f"Error processing {emoji} reaction on task {task.ticket}: {e}", exc_info=True)
@@ -540,10 +421,6 @@ Have a productive day!""",
     # Process removed reactions (state reversion)
     for emoji in removed_reactions:
         try:
-            # ALWAYS remove the reaction from database when user removes it
-            await task_service.task_repo.remove_reaction(task.ticket, user_id, emoji)
-            logger.info(f"🗑️ Removed {emoji} reaction from database for task {task.ticket}")
-            
             if emoji == "👍" and task.state == TaskState.STARTED:
                 # Revert STARTED → ASSIGNED
                 logger.info(f"↩️ Reverting task {task.ticket} from STARTED to ASSIGNED")
@@ -602,10 +479,8 @@ async def process_issue_reactions(issue, user_id, added_reactions, removed_react
                     # Send notification to issue creator if different user
                     if issue.creator_id != user_id:
                         try:
-                            from src.utils.message_utils import send_auto_delete_dm
-                            await send_auto_delete_dm(
-                                context=context,
-                                user_id=issue.creator_id,
+                            await context.bot.send_message(
+                                chat_id=issue.creator_id,
                                 text=f"""👍 **Issue Claimed**
 
 Your issue **{issue.issue_ticket}** has been claimed by {claimer_username}.
@@ -614,7 +489,8 @@ Your issue **{issue.issue_ticket}** has been claimed by {claimer_username}.
 **Issue:** {issue.title}
 
 [📎 View Issue]({issue_link})""",
-                                delete_after_seconds=60
+                                parse_mode='Markdown',
+                                disable_web_page_preview=True
                             )
                             logger.info(f"Sent claim notification to creator {issue.creator_id}")
                         except Exception as e:
@@ -627,10 +503,8 @@ Your issue **{issue.issue_ticket}** has been claimed by {claimer_username}.
                         try:
                             task = await task_service.get_task(issue.ticket)
                             if task and task.assignee_id != user_id and task.assignee_id != issue.creator_id:
-                                from src.utils.message_utils import send_auto_delete_dm
-                                await send_auto_delete_dm(
-                                    context=context,
-                                    user_id=task.assignee_id,
+                                await context.bot.send_message(
+                                    chat_id=task.assignee_id,
                                     text=f"""👍 **Issue Claimed on Your Task**
 
 An issue on your task **#{issue.ticket}** has been claimed by {claimer_username}.
@@ -638,7 +512,8 @@ An issue on your task **#{issue.ticket}** has been claimed by {claimer_username}
 **Issue:** {issue.issue_ticket} - {issue.title}
 
 [📎 View Issue]({issue_link})""",
-                                    delete_after_seconds=60
+                                    parse_mode='Markdown',
+                                    disable_web_page_preview=True
                                 )
                                 logger.info(f"Sent claim notification to assignee {task.assignee_id}")
                         except Exception as e:
@@ -652,12 +527,10 @@ An issue on your task **#{issue.ticket}** has been claimed by {claimer_username}
                     
                     # Send DM to issue creator
                     try:
-                        from src.utils.message_utils import send_auto_delete_dm
-                        await send_auto_delete_dm(
-                            context=context,
-                            user_id=issue.creator_id,
+                        await context.bot.send_message(
+                            chat_id=issue.creator_id,
                             text=f"✅ **Issue Resolved**\n\nIssue **{issue.issue_ticket}** has been resolved.\n\n**Task:** #{issue.ticket}\n**Issue:** {issue.title}",
-                            delete_after_seconds=60
+                            parse_mode='Markdown'
                         )
                         logger.info(f"Sent resolution notification to user {issue.creator_id}")
                     except Exception as e:
@@ -671,12 +544,10 @@ An issue on your task **#{issue.ticket}** has been claimed by {claimer_username}
                     
                     # Send notification to issue creator
                     try:
-                        from src.utils.message_utils import send_auto_delete_dm
-                        await send_auto_delete_dm(
-                            context=context,
-                            user_id=issue.creator_id,
+                        await context.bot.send_message(
+                            chat_id=issue.creator_id,
                             text=f"❌ **Issue Rejected**\n\nYour issue **{issue.issue_ticket}** has been marked as invalid.\n\n**Task:** #{issue.ticket}\n**Issue:** {issue.title}",
-                            delete_after_seconds=60
+                            parse_mode='Markdown'
                         )
                         logger.info(f"Sent rejection notification to user {issue.creator_id}")
                     except Exception as e:
@@ -689,12 +560,6 @@ An issue on your task **#{issue.ticket}** has been claimed by {claimer_username}
     for emoji in removed_reactions:
         try:
             if emoji == "👍":
-                # Check if ❤️ or 👎 was ADDED in the same update
-                # If yes, this is just Telegram replacing 👍 with ❤️/👎, not an actual unclaim
-                if "❤️" in added_reactions or "❤" in added_reactions or "👎" in added_reactions:
-                    logger.info(f"👍 removed but ❤️/👎 added in same update - skipping unclaim (this is resolution/rejection)")
-                    continue
-                
                 # Remove claim
                 success = await issue_service.unclaim_issue(issue.issue_ticket, user_id)
                 if success:
@@ -730,14 +595,6 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
     from src.data.models.qa_submission import QAStatus
     from datetime import datetime
     
-    # Build message link for warnings
-    group_id_str = str(config.TELEGRAM_GROUP_ID)
-    if group_id_str.startswith('-100'):
-        group_id_clean = group_id_str[4:]
-    else:
-        group_id_clean = group_id_str
-    qa_link = f"https://t.me/c/{group_id_clean}/{config.TOPIC_QA_REVIEW}/{qa_submission.message_id}"
-    
     # Check if user is the submitter - prevent them from reacting to their own QA
     if user_id == qa_submission.submitter_id and added_reactions:
         # Check if they added any review reactions (not just 🔥 which is system-added)
@@ -745,12 +602,10 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
         if review_reactions:
             logger.warning(f"⚠️ Submitter {user_id} tried to react to their own QA {qa_submission.ticket}")
             try:
-                from src.utils.message_utils import send_auto_delete_dm
-                await send_auto_delete_dm(
-                    context=context,
-                    user_id=user_id,
+                await context.bot.send_message(
+                    chat_id=user_id,
                     text=f"⚠️ **Cannot React to Your Own QA**\n\nYou cannot react to your own QA submission for task **#{qa_submission.ticket}**.\n\nOnly reviewers can claim, approve, or reject QA submissions.\n\nPlease wait for a reviewer to process your submission.",
-                    delete_after_seconds=30
+                    parse_mode='Markdown'
                 )
                 logger.info(f"Sent self-reaction warning to submitter {user_id}")
             except Exception as e:
@@ -759,13 +614,15 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
             return
     
     # Process added reactions
-    logger.info(f"🔍 Starting to process {len(added_reactions)} added reactions: {added_reactions}")
     for emoji in added_reactions:
-        logger.info(f"🔍 Processing added emoji: {emoji} (repr: {repr(emoji)})")
         try:
             if emoji == "👍":
                 # Claim QA for review
+                # Store reviewer claim in a new field or track via reactions
                 logger.info(f"👍 User {user_id} claimed QA {qa_submission.ticket} for review")
+                
+                # Update QA submission to track reviewer (we'll need to add this field)
+                # For now, just log and send notification
                 
                 # Send notification to submitter
                 try:
@@ -787,30 +644,17 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
             
             elif emoji == "❤️":
                 # Approve QA submission
-                logger.info(f"🔍 Entered ❤️ approval block for QA {qa_submission.ticket}")
                 if qa_submission.status != QAStatus.PENDING:
                     logger.warning(f"QA {qa_submission.ticket} is not pending (status: {qa_submission.status})")
-                    await send_invalid_reaction_warning(
-                        context, user_id, "❤️", "QA submission", f"#{qa_submission.ticket}",
-                        f"This reaction only works when QA is in **PENDING** status.\n\nCurrent status: **{qa_submission.status.value}**\n\nThis QA has already been processed.",
-                        qa_link
-                    )
                     continue
                 
                 # Check if user is QA reviewer or admin
                 if user_id not in config.QA_REVIEWERS and user_id not in config.ADMINISTRATORS and user_id not in config.OWNERS:
                     logger.warning(f"User {user_id} is not authorized to approve QA")
-                    await send_invalid_reaction_warning(
-                        context, user_id, "❤️", "QA submission", f"#{qa_submission.ticket}",
-                        "Only authorized QA reviewers, Administrators, and Owners can approve QA submissions.\n\nYou are not in the authorized list.\n\nPlease contact an administrator if you should have QA review access.",
-                        qa_link
-                    )
                     continue
                 
                 # Update QA status to APPROVED
-                logger.info(f"🔍 Calling qa_service.approve_qa for {qa_submission.ticket} by user {user_id}")
                 success = await qa_service.approve_qa(qa_submission.ticket, user_id)
-                logger.info(f"🔍 approve_qa returned: {success}")
                 if success:
                     logger.info(f"❤️ User {user_id} approved QA {qa_submission.ticket}")
                     
@@ -855,21 +699,11 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
                 # Note: Should use /reject command for proper reason, but allow reaction for quick reject
                 if qa_submission.status != QAStatus.PENDING:
                     logger.warning(f"QA {qa_submission.ticket} is not pending (status: {qa_submission.status})")
-                    await send_invalid_reaction_warning(
-                        context, user_id, "👎", "QA submission", f"#{qa_submission.ticket}",
-                        f"This reaction only works when QA is in **PENDING** status.\n\nCurrent status: **{qa_submission.status.value}**\n\nThis QA has already been processed.",
-                        qa_link
-                    )
                     continue
                 
                 # Check if user is QA reviewer or admin
                 if user_id not in config.QA_REVIEWERS and user_id not in config.ADMINISTRATORS and user_id not in config.OWNERS:
                     logger.warning(f"User {user_id} is not authorized to reject QA")
-                    await send_invalid_reaction_warning(
-                        context, user_id, "👎", "QA submission", f"#{qa_submission.ticket}",
-                        "Only authorized QA reviewers, Administrators, and Owners can reject QA submissions.\n\nYou are not in the authorized list.\n\nPlease contact an administrator if you should have QA review access.",
-                        qa_link
-                    )
                     continue
                 
                 # Update QA status to REJECTED
@@ -943,74 +777,61 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
                     logger.warning(f"Failed to send escalation notifications: {e}")
         
         except Exception as e:
-            logger.error(f"❌ ERROR processing {emoji} reaction on QA {qa_submission.ticket}: {e}", exc_info=True)
-    
-    logger.info(f"✅ Finished processing added reactions")
+            logger.error(f"Error processing {emoji} reaction on QA {qa_submission.ticket}: {e}", exc_info=True)
     
     # Process removed reactions
-    # IMPORTANT: If we just processed added reactions (like ❤️ approval), 
-    # skip processing removed reactions to avoid sending conflicting notifications
-    logger.info(f"🔍 Starting to process {len(removed_reactions)} removed reactions: {removed_reactions}")
-    logger.info(f"🔍 Added reactions in this update: {added_reactions}")
-    
     for emoji in removed_reactions:
-        logger.info(f"🔍 Processing removed emoji: {emoji} (repr: {repr(emoji)})")
         try:
             if emoji == "👍":
-                # Check if ❤️ or 👎 was ADDED in the same update
-                # If yes, this is just Telegram replacing 👍 with ❤️/👎, not an actual unclaim
-                logger.info(f"🔍 Checking if ❤️ or 👎 in added_reactions: {added_reactions}")
-                logger.info(f"🔍 '❤️' in added_reactions: {'❤️' in added_reactions}")
-                logger.info(f"🔍 '👎' in added_reactions: {'👎' in added_reactions}")
-                
-                # Check using both string comparison and set membership
-                has_love = "❤️" in added_reactions or "❤" in added_reactions
-                has_thumbs_down = "👎" in added_reactions
-                
-                logger.info(f"🔍 has_love: {has_love}, has_thumbs_down: {has_thumbs_down}")
-                
-                if has_love or has_thumbs_down:
-                    logger.info(f"👍 removed but ❤️/👎 added in same update - skipping unclaim notification (this is approval/rejection)")
-                    continue
-                
-                # Fetch latest QA status (might have been updated by added reactions)
-                latest_qa = await qa_repo.get_submission_by_message_id(qa_submission.message_id)
-                if not latest_qa:
-                    logger.warning(f"Could not fetch latest QA for message {qa_submission.message_id}")
-                    continue
-                
-                logger.info(f"👍 removed from QA {latest_qa.ticket} - current status: {latest_qa.status}")
-                
                 # Only send unclaim notification if QA is still PENDING
                 # Don't send if already approved/rejected
-                if latest_qa.status == QAStatus.PENDING:
+                if qa_submission.status == QAStatus.PENDING:
                     # Remove reviewer claim
-                    logger.info(f"↩️ User {user_id} unclaimed QA {latest_qa.ticket} - sending unclaim notification")
+                    logger.info(f"↩️ User {user_id} unclaimed QA {qa_submission.ticket}")
                     
                     # Send notification to submitter
                     try:
                         await context.bot.send_message(
-                            chat_id=latest_qa.submitter_id,
-                            text=f"↩️ **QA Review Unclaimed**\n\nQA submission for task **#{latest_qa.ticket}** is no longer being reviewed.\n\nWaiting for another reviewer to claim it.",
+                            chat_id=qa_submission.submitter_id,
+                            text=f"↩️ **QA Review Unclaimed**\n\nQA submission for task **#{qa_submission.ticket}** is no longer being reviewed.\n\nWaiting for another reviewer to claim it.",
                             parse_mode='Markdown'
                         )
-                        logger.info(f"Sent unclaim notification to submitter {latest_qa.submitter_id}")
                     except Exception as e:
                         logger.warning(f"Failed to send unclaim notification: {e}")
                 else:
-                    logger.info(f"Ignoring 👍 removal on QA {latest_qa.ticket} - status is {latest_qa.status}, not PENDING")
+                    logger.debug(f"Ignoring 👍 removal on QA {qa_submission.ticket} - already {qa_submission.status}")
             
             elif emoji == "❤️":
-                # DO NOT revert approval when ❤️ is removed
-                # Once QA is approved, it should stay approved
-                # Removing the reaction is just a UI action, not a state change
-                logger.debug(f"❤️ removed from QA {qa_submission.ticket} - ignoring (QA stays APPROVED)")
+                # Revert approval (if needed)
+                if qa_submission.status == QAStatus.APPROVED:
+                    logger.info(f"↩️ Reverting QA {qa_submission.ticket} from APPROVED to PENDING")
+                    await qa_repo.update_submission_status(
+                        qa_submission.ticket, QAStatus.PENDING, None, None
+                    )
+                    
+                    # Revert task state
+                    task_service = context.bot_data.get('task_service')
+                    if task_service:
+                        from src.data.models.task import TaskState
+                        await task_service.task_repo.update_task_state(
+                            qa_submission.ticket, TaskState.QA_SUBMITTED, datetime.now()
+                        )
             
             elif emoji == "👎":
-                # DO NOT revert rejection when 👎 is removed
-                # Once QA is rejected, it should stay rejected
-                # Removing the reaction is just a UI action, not a state change
-                logger.debug(f"👎 removed from QA {qa_submission.ticket} - ignoring (QA stays REJECTED)")
+                # Revert rejection
+                if qa_submission.status == QAStatus.REJECTED:
+                    logger.info(f"↩️ Reverting QA {qa_submission.ticket} from REJECTED to PENDING")
+                    await qa_repo.update_submission_status(
+                        qa_submission.ticket, QAStatus.PENDING, None, None
+                    )
+                    
+                    # Revert task state
+                    task_service = context.bot_data.get('task_service')
+                    if task_service:
+                        from src.data.models.task import TaskState
+                        await task_service.task_repo.update_task_state(
+                            qa_submission.ticket, TaskState.QA_SUBMITTED, datetime.now()
+                        )
         
         except Exception as e:
             logger.error(f"Error removing {emoji} reaction from QA {qa_submission.ticket}: {e}", exc_info=True)
@@ -1035,38 +856,6 @@ async def process_admin_alert_reactions(admin_alert, user_id, added_reactions, r
     
     if not is_authorized:
         logger.warning(f"User {user_id} not authorized to react to admin alerts")
-        # Send warning DM
-        try:
-            # Build link to admin alert message
-            group_id_str = str(config.TELEGRAM_GROUP_ID)
-            if group_id_str.startswith('-100'):
-                group_id_clean = group_id_str[4:]
-            else:
-                group_id_clean = group_id_str
-            
-            alert_link = f"https://t.me/c/{group_id_clean}/{config.TOPIC_ADMIN_CONTROL_PANEL}/{admin_alert.message_id}"
-            
-            await context.bot.send_message(
-                chat_id=user_id,
-                text=f"""❌ **Invalid Reaction**
-
-Your reaction on an admin alert was not processed.
-
-**Reason:** Only Administrators, Managers, and Owners can react to admin alerts.
-
-You do not have the required permissions.
-
-[📎 View Alert Message]({alert_link})
-
-**Action Required:** Please remove your reaction from the message.
-
-If you believe you should have admin access, contact a system administrator.""",
-                parse_mode='Markdown',
-                disable_web_page_preview=True
-            )
-            logger.info(f"✉️ Sent unauthorized admin alert reaction warning to user {user_id}")
-        except Exception as e:
-            logger.warning(f"Failed to send admin alert reaction warning: {e}")
         return
     
     # Process added reactions
@@ -1114,154 +903,3 @@ def setup_reaction_handlers(application: Application, config: Config):
     application.add_handler(MessageReactionHandler(handle_reaction_update))
     
     logger.info("Reaction handlers registered")
-
-
-async def process_leave_reactions(leave_request, user_id, added_reactions, removed_reactions,
-                                  attendance_repo, context, config):
-    """
-    Process reactions on leave request messages.
-    
-    Reactions:
-    - 👍: APPROVE leave request (admin/manager/owner only)
-    - 👎: REJECT leave request (admin/manager/owner only)
-    """
-    
-    # Permission check - only admins/managers/owners can approve/reject
-    is_privileged = (
-        user_id in config.ADMINISTRATORS or
-        user_id in config.MANAGERS or
-        user_id in config.OWNERS
-    )
-    
-    if not is_privileged:
-        logger.warning(f"User {user_id} tried to approve/reject leave request without permission")
-        await send_invalid_reaction_warning(
-            context, user_id, "reaction", "leave request", f"#{leave_request.id}",
-            "Only Administrators, Managers, and Owners can approve or reject leave requests."
-        )
-        return
-    
-    # Process added reactions
-    for emoji in added_reactions:
-        try:
-            if emoji == "👍":
-                # Approve leave request
-                leave_service = context.bot_data.get('leave_request_service')
-                if leave_service:
-                    success, message = await leave_service.approve_leave_request(
-                        leave_request.id,
-                        user_id
-                    )
-                    
-                    if success:
-                        logger.info(f"✅ Approved leave request {leave_request.id}")
-                        
-                        # Send DM to employee
-                        from src.utils.message_utils import send_auto_delete_dm
-                        employee = await context.bot_data.get('user_repository').get_user(leave_request.user_id)
-                        
-                        duration = (leave_request.end_date - leave_request.start_date).days + 1
-                        dm_text = f"""✅ **Leave Approved**
-
-**Dates:** {leave_request.start_date} to {leave_request.end_date}
-**Duration:** {duration} days
-**Reason:** {leave_request.reason}
-
-Your leave request has been approved. You are now marked as on leave."""
-                        
-                        if leave_request.replacement_user_id:
-                            replacement = await context.bot_data.get('user_repository').get_user(leave_request.replacement_user_id)
-                            dm_text += f"\n\n**Replacement:** @{replacement.username if replacement else 'Unknown'} will handle your tasks."
-                        
-                        try:
-                            await send_auto_delete_dm(
-                                context=context,
-                                user_id=leave_request.user_id,
-                                text=dm_text,
-                                delete_after_seconds=120
-                            )
-                        except Exception as e:
-                            logger.warning(f"Failed to send approval DM to user {leave_request.user_id}: {e}")
-                        
-                        # Update message in topic
-                        try:
-                            await context.bot.edit_message_text(
-                                chat_id=config.TELEGRAM_GROUP_ID,
-                                message_id=leave_request.message_id,
-                                text=f"""📋 **Leave Request**
-
-**Employee:** @{employee.username if employee else 'Unknown'}
-**User ID:** {leave_request.user_id}
-**Dates:** {leave_request.start_date} to {leave_request.end_date}
-**Duration:** {duration} days
-**Reason:** {leave_request.reason}
-**Status:** ✅ APPROVED
-
-Approved by: @{(await context.bot_data.get('user_repository').get_user(user_id)).username if user_id else 'Unknown'}""",
-                                parse_mode='Markdown'
-                            )
-                        except Exception as e:
-                            logger.warning(f"Failed to update leave request message: {e}")
-                    else:
-                        logger.warning(f"Failed to approve leave request: {message}")
-            
-            elif emoji == "👎":
-                # Reject leave request
-                leave_service = context.bot_data.get('leave_request_service')
-                if leave_service:
-                    success, message = await leave_service.reject_leave_request(
-                        leave_request.id,
-                        user_id
-                    )
-                    
-                    if success:
-                        logger.info(f"✅ Rejected leave request {leave_request.id}")
-                        
-                        # Send DM to employee
-                        from src.utils.message_utils import send_auto_delete_dm
-                        employee = await context.bot_data.get('user_repository').get_user(leave_request.user_id)
-                        
-                        dm_text = f"""❌ **Leave Rejected**
-
-**Dates:** {leave_request.start_date} to {leave_request.end_date}
-**Reason:** {leave_request.reason}
-
-Your leave request has been rejected. Please contact your manager for more information."""
-                        
-                        try:
-                            await send_auto_delete_dm(
-                                context=context,
-                                user_id=leave_request.user_id,
-                                text=dm_text,
-                                delete_after_seconds=120
-                            )
-                        except Exception as e:
-                            logger.warning(f"Failed to send rejection DM to user {leave_request.user_id}: {e}")
-                        
-                        # Update message in topic
-                        try:
-                            duration = (leave_request.end_date - leave_request.start_date).days + 1
-                            await context.bot.edit_message_text(
-                                chat_id=config.TELEGRAM_GROUP_ID,
-                                message_id=leave_request.message_id,
-                                text=f"""📋 **Leave Request**
-
-**Employee:** @{employee.username if employee else 'Unknown'}
-**User ID:** {leave_request.user_id}
-**Dates:** {leave_request.start_date} to {leave_request.end_date}
-**Duration:** {duration} days
-**Reason:** {leave_request.reason}
-**Status:** ❌ REJECTED
-
-Rejected by: @{(await context.bot_data.get('user_repository').get_user(user_id)).username if user_id else 'Unknown'}""",
-                                parse_mode='Markdown'
-                            )
-                        except Exception as e:
-                            logger.warning(f"Failed to update leave request message: {e}")
-                    else:
-                        logger.warning(f"Failed to reject leave request: {message}")
-        
-        except Exception as e:
-            logger.error(f"Error processing {emoji} reaction on leave request: {e}", exc_info=True)
-
-

@@ -1,0 +1,32 @@
+# Core Dependencies
+python-telegram-bot==21.0
+python-dotenv==1.0.0
+APScheduler==3.10.4
+pytz==2023.3
+
+# Database Support
+aiosqlite==0.19.0
+motor==3.3.2  # Async MongoDB driver
+aiofiles==23.2.1
+
+# Security
+cryptography==41.0.7
+
+# Utilities
+python-dateutil==2.8.2
+
+# Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+hypothesis==6.92.1
+
+# Code Quality
+black==23.12.1
+flake8==6.1.0
+mypy==1.7.1
+isort==5.13.2
+
+# Development
+ipython==8.18.1

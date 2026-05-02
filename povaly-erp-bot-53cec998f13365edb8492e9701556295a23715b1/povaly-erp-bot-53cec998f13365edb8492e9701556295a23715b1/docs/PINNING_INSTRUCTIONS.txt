@@ -1,0 +1,141 @@
+📌 HOW TO PIN MESSAGES
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FOR ADMINISTRATORS / MANAGERS / OWNERS ONLY
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 TWO METHODS TO PIN:
+
+METHOD 1 - COMMAND MENU (Beginner Friendly):
+1. Type: /pin
+2. Select from 3 options:
+   • 📋 Pin Default Guide → Pins topic guide automatically
+   • ✏️ Pin Custom Message → Shows template & instructions
+   • 📁 Pin from File → Shows file path template
+
+METHOD 2 - DIRECT MARKER (Fast & Powerful):
+Just type [PINNED] in your message:
+
+Example 1 - Pin Default Guide:
+[PINNED]
+
+Example 2 - Pin Custom Message:
+[PINNED] 🎯 Today's Focus
+• Complete all pending tasks
+• Review QA submissions
+• Update project status
+
+Example 3 - Pin from File:
+[PINNED] docs/GUIDE_TASK_ALLOCATION.txt
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ QUICK PIN DEFAULT GUIDE:
+
+1. Go to any topic
+2. Type: [PINNED]
+3. Bot automatically pins the guide for that topic
+4. Everyone is notified ✅
+
+OR
+
+1. Type: /pin
+2. Click "📋 Pin Default Guide"
+3. Done! ✅
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✏️ PIN CUSTOM MESSAGE:
+
+Why use [PINNED] marker?
+• Preserves ALL formatting (line breaks, emojis, spacing)
+• No file creation needed
+• Easy for everyone
+• Message shows as YOUR message (not bot)
+
+How it works:
+1. Type your message with [PINNED] at the start
+2. Use Enter for line breaks
+3. Add emojis, formatting, anything
+4. Send it
+5. Bot removes [PINNED] and pins your message
+
+Example:
+[PINNED] 📢 IMPORTANT ANNOUNCEMENT
+
+🎯 Today's Priorities:
+• Task deadline: 6 PM
+• QA review at 4 PM
+• Team sync at 2 PM
+
+⚠️ Reminder: Submit work early!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔄 UPDATE & RE-PIN:
+
+For Default Guides:
+1. Edit docs/GUIDE_TASK_ALLOCATION.txt
+2. Go to Task Allocation topic
+3. Type: [PINNED]
+4. Bot sends & pins updated guide
+5. Old guide is automatically unpinned
+6. Done! ✅
+
+For Custom Messages:
+1. Type new message with [PINNED]
+2. Bot pins the new one
+3. Old message is automatically unpinned
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 TIPS:
+
+• [PINNED] marker works in ANY topic
+• Use /pin command for guided experience
+• [PINNED] for quick direct pinning
+• Only admins/managers/owners can pin
+• Bot needs "Pin Messages" permission
+• [PINNED] preserves all formatting perfectly
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📁 GUIDE FILES BY TOPIC:
+
+Task Allocation → docs/GUIDE_TASK_ALLOCATION.txt
+Core Operations → docs/GUIDE_CORE_OPERATIONS.txt
+QA Review → docs/GUIDE_QA_REVIEW.txt
+Attendance/Leave → docs/GUIDE_ATTENDANCE_LEAVE.txt
+Official Directives → docs/GUIDE_OFFICIAL_DIRECTIVES.txt
+Brand Repository → docs/GUIDE_BRAND_REPOSITORY.txt
+Central Archive → docs/GUIDE_CENTRAL_ARCHIVE.txt
+Daily Sync → docs/GUIDE_DAILY_SYNC.txt
+Admin Control Panel → docs/GUIDE_ADMIN_CONTROL_PANEL.txt
+Strategic Lounge → docs/GUIDE_STRATEGIC_LOUNGE.txt
+
+Pattern: GUIDE_{TOPIC_NAME}.txt
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❓ TROUBLESHOOTING:
+
+Message not pinning?
+→ Check bot has "Pin Messages" permission
+→ Verify you're authorized (admin/manager/owner)
+→ Make sure [PINNED] is at the very start
+
+Guide file not found?
+→ Create docs/GUIDE_{TOPIC_NAME}.txt
+→ Use consistent naming pattern
+
+Access denied?
+→ Only admins/managers/owners can use /pin or [PINNED]
+→ Check your role in config
+
+Formatting lost?
+→ Use [PINNED] marker (NOT /pin command with text)
+→ [PINNED] preserves all formatting perfectly
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
