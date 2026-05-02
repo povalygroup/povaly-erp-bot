@@ -11,6 +11,29 @@ from src.data.models.task import TaskState
 logger = logging.getLogger(__name__)
 
 
+async def send_invalid_reaction_warning(context, user_id, emoji, entity_type, entity_id, reason):
+    """
+    Send DM to user explaining why their reaction was invalid.
+    
+    Args:
+        context: Bot context
+        user_id: User who added the invalid reaction
+        emoji: The reaction emoji that was invalid
+        entity_type: Type of entity (Task, Issue, QA, etc.)
+        entity_id: ID of the entity (ticket number)
+        reason: Explanation of why it was invalid
+    """
+    try:
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=f"❌ **Invalid Reaction**\n\nYour {emoji} reaction on {entity_type} **{entity_id}** was not processed.\n\n**Reason:** {reason}",
+            parse_mode='Markdown'
+        )
+        logger.info(f"✉️ Sent invalid reaction warning to user {user_id} for {emoji} on {entity_type} {entity_id}")
+    except Exception as e:
+        logger.warning(f"Failed to send invalid reaction warning to user {user_id}: {e}")
+
+
 async def handle_reaction_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Handle reaction updates for both tasks and issues.
@@ -331,8 +354,16 @@ Have a productive day!""",
                             logger.warning(f"Failed to transition {task.ticket} to STARTED")
                     else:
                         logger.warning(f"User {user_id} is not assignee of task {task.ticket}")
+                        await send_invalid_reaction_warning(
+                            context, user_id, "👍", "task", f"#{task.ticket}",
+                            f"Only the task assignee can start the task.\n\nThis task is assigned to user ID: {task.assignee_id}"
+                        )
                 else:
                     logger.debug(f"Task {task.ticket} not in ASSIGNED state (current: {task.state})")
+                    await send_invalid_reaction_warning(
+                        context, user_id, "👍", "task", f"#{task.ticket}",
+                        f"This reaction only works when task is in ASSIGNED state.\n\nCurrent state: **{task.state.value}**\n\nThe 👍 reaction is used to start working on a task."
+                    )
             
             elif emoji == "❤️":
                 # Two scenarios for heart reaction:
@@ -354,6 +385,10 @@ Have a productive day!""",
                             logger.warning(f"Failed to transition {task.ticket} to APPROVED")
                     else:
                         logger.warning(f"User {user_id} is not a QA reviewer")
+                        await send_invalid_reaction_warning(
+                            context, user_id, "❤️", "task", f"#{task.ticket}",
+                            "Only authorized QA reviewers can approve QA submissions.\n\nYou are not in the QA reviewers list.\n\nPlease contact an administrator if you should have QA review access."
+                        )
                 
                 elif task.state == TaskState.APPROVED:
                     # Assignee confirming task completion
@@ -375,9 +410,17 @@ Have a productive day!""",
                             logger.warning(f"Failed to send completion confirmation: {e}")
                     else:
                         logger.warning(f"User {user_id} is not the assignee of task {task.ticket}")
+                        await send_invalid_reaction_warning(
+                            context, user_id, "❤️", "task", f"#{task.ticket}",
+                            f"Only the task assignee can confirm completion.\n\nThis task is assigned to user ID: {task.assignee_id}"
+                        )
                 
                 else:
                     logger.debug(f"Task {task.ticket} not in QA_SUBMITTED or APPROVED state (current: {task.state})")
+                    await send_invalid_reaction_warning(
+                        context, user_id, "❤️", "task", f"#{task.ticket}",
+                        f"This reaction only works when:\n• Task is in **QA_SUBMITTED** state (for QA reviewers to approve)\n• Task is in **APPROVED** state (for assignees to confirm completion)\n\nCurrent state: **{task.state.value}**\n\nTo mark this task complete, please submit it for QA review first using `/submitqa` command."
+                    )
             
             elif emoji == "👎":
                 # Transition QA_SUBMITTED → REJECTED
@@ -396,8 +439,16 @@ Have a productive day!""",
                             logger.warning(f"Failed to transition {task.ticket} to REJECTED")
                     else:
                         logger.warning(f"User {user_id} is not a QA reviewer")
+                        await send_invalid_reaction_warning(
+                            context, user_id, "👎", "task", f"#{task.ticket}",
+                            "Only authorized QA reviewers can reject QA submissions.\n\nYou are not in the QA reviewers list.\n\nPlease contact an administrator if you should have QA review access."
+                        )
                 else:
                     logger.debug(f"Task {task.ticket} not in QA_SUBMITTED state (current: {task.state})")
+                    await send_invalid_reaction_warning(
+                        context, user_id, "👎", "task", f"#{task.ticket}",
+                        f"This reaction only works when task is in **QA_SUBMITTED** state.\n\nCurrent state: **{task.state.value}**\n\nThe 👎 reaction is used by QA reviewers to reject QA submissions."
+                    )
             
             elif emoji == "🔥":
                 # Add fire exemption (admin/manager only)
@@ -414,6 +465,10 @@ Have a productive day!""",
                         logger.warning(f"Failed to add exemption to {task.ticket}")
                 else:
                     logger.warning(f"User {user_id} not authorized for fire exemption")
+                    await send_invalid_reaction_warning(
+                        context, user_id, "🔥", "task", f"#{task.ticket}",
+                        "Only Administrators and Managers can add fire exemptions to tasks.\n\nYou do not have the required permissions.\n\nPlease contact an administrator if this task needs urgent attention."
+                    )
         
         except Exception as e:
             logger.error(f"Error processing {emoji} reaction on task {task.ticket}: {e}", exc_info=True)
@@ -650,11 +705,19 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
                 # Approve QA submission
                 if qa_submission.status != QAStatus.PENDING:
                     logger.warning(f"QA {qa_submission.ticket} is not pending (status: {qa_submission.status})")
+                    await send_invalid_reaction_warning(
+                        context, user_id, "❤️", "QA submission", f"#{qa_submission.ticket}",
+                        f"This reaction only works when QA is in **PENDING** status.\n\nCurrent status: **{qa_submission.status.value}**\n\nThis QA has already been processed."
+                    )
                     continue
                 
                 # Check if user is QA reviewer or admin
                 if user_id not in config.QA_REVIEWERS and user_id not in config.ADMINISTRATORS and user_id not in config.OWNERS:
                     logger.warning(f"User {user_id} is not authorized to approve QA")
+                    await send_invalid_reaction_warning(
+                        context, user_id, "❤️", "QA submission", f"#{qa_submission.ticket}",
+                        "Only authorized QA reviewers, Administrators, and Owners can approve QA submissions.\n\nYou are not in the authorized list.\n\nPlease contact an administrator if you should have QA review access."
+                    )
                     continue
                 
                 # Update QA status to APPROVED
@@ -703,11 +766,19 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
                 # Note: Should use /reject command for proper reason, but allow reaction for quick reject
                 if qa_submission.status != QAStatus.PENDING:
                     logger.warning(f"QA {qa_submission.ticket} is not pending (status: {qa_submission.status})")
+                    await send_invalid_reaction_warning(
+                        context, user_id, "👎", "QA submission", f"#{qa_submission.ticket}",
+                        f"This reaction only works when QA is in **PENDING** status.\n\nCurrent status: **{qa_submission.status.value}**\n\nThis QA has already been processed."
+                    )
                     continue
                 
                 # Check if user is QA reviewer or admin
                 if user_id not in config.QA_REVIEWERS and user_id not in config.ADMINISTRATORS and user_id not in config.OWNERS:
                     logger.warning(f"User {user_id} is not authorized to reject QA")
+                    await send_invalid_reaction_warning(
+                        context, user_id, "👎", "QA submission", f"#{qa_submission.ticket}",
+                        "Only authorized QA reviewers, Administrators, and Owners can reject QA submissions.\n\nYou are not in the authorized list.\n\nPlease contact an administrator if you should have QA review access."
+                    )
                     continue
                 
                 # Update QA status to REJECTED
