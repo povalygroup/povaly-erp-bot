@@ -421,6 +421,10 @@ Have a productive day!""",
     # Process removed reactions (state reversion)
     for emoji in removed_reactions:
         try:
+            # ALWAYS remove the reaction from database when user removes it
+            await task_service.task_repo.remove_reaction(task.ticket, user_id, emoji)
+            logger.info(f"🗑️ Removed {emoji} reaction from database for task {task.ticket}")
+            
             if emoji == "👍" and task.state == TaskState.STARTED:
                 # Revert STARTED → ASSIGNED
                 logger.info(f"↩️ Reverting task {task.ticket} from STARTED to ASSIGNED")

@@ -400,6 +400,8 @@ cp data/backups/BACKUP_FILE_NAME.db data/povaly_erp_bot.db
 nohup ./start_bot_forever.sh &
 
 # 5. Verify
+sleep 5
+
 ./check_bot.sh
 ```
 

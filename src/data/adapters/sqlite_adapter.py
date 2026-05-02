@@ -673,6 +673,14 @@ class SQLiteAdapter:
             rows = await cursor.fetchall()
             return [TaskReaction.from_dict(dict(row)) for row in rows]
     
+    async def remove_reaction(self, ticket: str, user_id: int, reaction_type: str):
+        """Remove a reaction from the database."""
+        await self.conn.execute("""
+            DELETE FROM task_reactions 
+            WHERE ticket = ? AND user_id = ? AND reaction = ?
+        """, (ticket, user_id, reaction_type))
+        await self.conn.commit()
+    
     # User operations
     async def insert_user(self, user: User):
         """Insert a new user."""

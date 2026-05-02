@@ -66,6 +66,10 @@ class TaskRepository:
         """Get the first reaction of a specific type for a task."""
         return await self.db.get_first_reaction(ticket, reaction_type)
     
+    async def remove_reaction(self, ticket: str, user_id: int, reaction_type: str) -> None:
+        """Remove a reaction from the database."""
+        await self.db.remove_reaction(ticket, user_id, reaction_type)
+    
     async def get_reactions_by_message(self, message_id: int) -> List[TaskReaction]:
         """Get all reactions for a message."""
         return await self.db.get_reactions_by_message(message_id)
