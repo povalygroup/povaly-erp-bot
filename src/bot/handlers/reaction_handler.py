@@ -753,7 +753,9 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
             return
     
     # Process added reactions
+    logger.info(f"🔍 Starting to process {len(added_reactions)} added reactions: {added_reactions}")
     for emoji in added_reactions:
+        logger.info(f"🔍 Processing added emoji: {emoji} (repr: {repr(emoji)})")
         try:
             if emoji == "👍":
                 # Claim QA for review
@@ -779,6 +781,7 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
             
             elif emoji == "❤️":
                 # Approve QA submission
+                logger.info(f"🔍 Entered ❤️ approval block for QA {qa_submission.ticket}")
                 if qa_submission.status != QAStatus.PENDING:
                     logger.warning(f"QA {qa_submission.ticket} is not pending (status: {qa_submission.status})")
                     await send_invalid_reaction_warning(
@@ -799,7 +802,9 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
                     continue
                 
                 # Update QA status to APPROVED
+                logger.info(f"🔍 Calling qa_service.approve_qa for {qa_submission.ticket} by user {user_id}")
                 success = await qa_service.approve_qa(qa_submission.ticket, user_id)
+                logger.info(f"🔍 approve_qa returned: {success}")
                 if success:
                     logger.info(f"❤️ User {user_id} approved QA {qa_submission.ticket}")
                     
@@ -932,9 +937,12 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
                     logger.warning(f"Failed to send escalation notifications: {e}")
         
         except Exception as e:
-            logger.error(f"Error processing {emoji} reaction on QA {qa_submission.ticket}: {e}", exc_info=True)
+            logger.error(f"❌ ERROR processing {emoji} reaction on QA {qa_submission.ticket}: {e}", exc_info=True)
+    
+    logger.info(f"✅ Finished processing added reactions")
     
     # Process removed reactions
+    logger.info(f"🔍 Starting to process {len(removed_reactions)} removed reactions: {removed_reactions}")
     for emoji in removed_reactions:
         try:
             if emoji == "👍":
