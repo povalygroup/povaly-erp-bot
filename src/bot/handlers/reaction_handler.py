@@ -783,6 +783,11 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
     for emoji in removed_reactions:
         try:
             if emoji == "👍":
+                # Fetch latest QA status (might have been updated by added reactions)
+                qa_submission = await qa_repo.get_submission_by_message_id(message_id)
+                if not qa_submission:
+                    continue
+                
                 # Only send unclaim notification if QA is still PENDING
                 # Don't send if already approved/rejected
                 if qa_submission.status == QAStatus.PENDING:
