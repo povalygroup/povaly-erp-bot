@@ -757,11 +757,7 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
         try:
             if emoji == "👍":
                 # Claim QA for review
-                # Store reviewer claim in a new field or track via reactions
                 logger.info(f"👍 User {user_id} claimed QA {qa_submission.ticket} for review")
-                
-                # Update QA submission to track reviewer (we'll need to add this field)
-                # For now, just log and send notification
                 
                 # Send notification to submitter
                 try:
@@ -942,6 +938,12 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
     for emoji in removed_reactions:
         try:
             if emoji == "👍":
+                # Check if ❤️ or 👎 was ADDED in the same update
+                # If yes, this is just Telegram replacing 👍 with ❤️/👎, not an actual unclaim
+                if "❤️" in added_reactions or "👎" in added_reactions:
+                    logger.debug(f"👍 removed but ❤️/👎 added - this is approval/rejection, not unclaim")
+                    continue
+                
                 # Fetch latest QA status (might have been updated by added reactions)
                 latest_qa = await qa_repo.get_submission_by_message_id(qa_submission.message_id)
                 if not latest_qa:
