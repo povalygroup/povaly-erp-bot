@@ -338,6 +338,88 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             logger.error(f"❌ Error syncing user info for {user_id} (@{username}): {e}", exc_info=True)
     
+    # ============================================
+    # TOPIC PROTECTION: Prevent unauthorized access to restricted topics
+    # ============================================
+    restricted_topics = {
+        config.TOPIC_OFFICIAL_DIRECTIVES: {
+            'name': 'Official Directives',
+            'allowed': config.ADMINISTRATORS + config.OWNERS,
+            'reason': 'Only Administrators and Owners can post official directives.'
+        },
+        config.TOPIC_CENTRAL_ARCHIVE: {
+            'name': 'Central Archive',
+            'allowed': [],  # Bot only - no humans
+            'reason': 'This is an archive topic. Only the bot can post here.'
+        },
+        config.TOPIC_DAILY_SYNC: {
+            'name': 'Daily Sync',
+            'allowed': [],  # Bot only - no humans
+            'reason': 'This is a reports topic. Only the bot can post here.'
+        },
+        config.TOPIC_ADMIN_CONTROL_PANEL: {
+            'name': 'Admin Control Panel',
+            'allowed': config.ADMINISTRATORS + config.MANAGERS + config.OWNERS,
+            'reason': 'Only Administrators, Managers, and Owners can access the Admin Control Panel.'
+        },
+        config.TOPIC_TRASH: {
+            'name': 'Trash',
+            'allowed': [],  # Bot only - no humans
+            'reason': 'This is a trash topic. Only the bot can move messages here.'
+        },
+    }
+    
+    # Check if this topic is restricted
+    if topic_id in restricted_topics:
+        topic_info = restricted_topics[topic_id]
+        
+        # Check if user is authorized
+        is_authorized = user_id in topic_info['allowed']
+        
+        if not is_authorized:
+            # Delete the unauthorized message
+            try:
+                await message.delete()
+                logger.info(f"🚫 Deleted unauthorized message from user {user_id} in restricted topic {topic_id} ({topic_info['name']})")
+            except Exception as e:
+                logger.error(f"Failed to delete unauthorized message: {e}")
+            
+            # Send warning DM
+            try:
+                # Build link to the topic
+                group_id_str = str(config.TELEGRAM_GROUP_ID)
+                if group_id_str.startswith('-100'):
+                    group_id_clean = group_id_str[4:]
+                else:
+                    group_id_clean = group_id_str
+                
+                topic_link = f"https://t.me/c/{group_id_clean}/{topic_id}"
+                
+                await context.bot.send_message(
+                    chat_id=user_id,
+                    text=f"""🚫 **Access Denied**
+
+You attempted to post a message in **{topic_info['name']}** topic.
+
+**Reason:** {topic_info['reason']}
+
+[📎 View Topic]({topic_link})
+
+Your message has been automatically deleted.
+
+**Important:** Do not attempt to delete messages in this topic. All activity is monitored and logged.
+
+If you believe you should have access to this topic, please contact an administrator.""",
+                    parse_mode='Markdown',
+                    disable_web_page_preview=True
+                )
+                logger.info(f"✉️ Sent topic restriction warning to user {user_id}")
+            except Exception as e:
+                logger.warning(f"Failed to send topic restriction warning: {e}")
+            
+            # Stop processing this message
+            return
+    
     # Check for [PINNED] marker - handle before any other processing
     if text.strip().startswith('[PINNED]'):
         await handle_pinned_message(update, context, config)
