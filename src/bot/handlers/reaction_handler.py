@@ -410,7 +410,7 @@ Have a productive day!""",
                         task_link
                     )
             
-            elif emoji == "❤️":
+            elif emoji == "❤️" or emoji == "❤":
                 # Two scenarios for heart reaction:
                 # 1. QA_SUBMITTED → APPROVED (QA reviewer approves)
                 # 2. APPROVED → Mark as complete (Assignee confirms completion)
@@ -551,7 +551,7 @@ Have a productive day!""",
                     task.ticket, TaskState.ASSIGNED, datetime.now()
                 )
             
-            elif emoji == "❤️" and task.state == TaskState.APPROVED:
+            elif (emoji == "❤️" or emoji == "❤") and task.state == TaskState.APPROVED:
                 # Revert APPROVED → QA_SUBMITTED
                 logger.info(f"↩️ Reverting task {task.ticket} from APPROVED to QA_SUBMITTED")
                 await task_service.task_repo.update_task_state(
@@ -790,7 +790,7 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
                 except Exception as e:
                     logger.warning(f"Failed to send claim notification: {e}")
             
-            elif emoji == "❤️":
+            elif emoji == "❤️" or emoji == "❤":
                 # Approve QA submission
                 logger.info(f"🔍 Entered ❤️ approval block for QA {qa_submission.ticket}")
                 if qa_submission.status != QAStatus.PENDING:
@@ -1005,7 +1005,7 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
                 else:
                     logger.info(f"Ignoring 👍 removal on QA {latest_qa.ticket} - status is {latest_qa.status}, not PENDING")
             
-            elif emoji == "❤️":
+            elif emoji == "❤️" or emoji == "❤":
                 # DO NOT revert approval when ❤️ is removed
                 # Once QA is approved, it should stay approved
                 # Removing the reaction is just a UI action, not a state change
@@ -1083,7 +1083,7 @@ If you believe you should have admin access, contact a system administrator.""",
                 if success:
                     logger.info(f"👍 User {user_id} acknowledged admin alert {admin_alert.message_id}")
             
-            elif emoji == "❤️":
+            elif emoji == "❤️" or emoji == "❤":
                 # Mark as resolved
                 success = await admin_alert_repo.mark_resolved(admin_alert.message_id, user_id)
                 if success:
@@ -1101,7 +1101,7 @@ If you believe you should have admin access, contact a system administrator.""",
                 if success:
                     logger.info(f"↩️ User {user_id} removed acknowledgment from admin alert {admin_alert.message_id}")
             
-            elif emoji == "❤️":
+            elif emoji == "❤️" or emoji == "❤":
                 # Unmark resolved
                 success = await admin_alert_repo.unmark_resolved(admin_alert.message_id)
                 if success:
