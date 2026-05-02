@@ -97,6 +97,7 @@ class QAService:
     ) -> bool:
         """
         Approve a QA submission.
+        Works anytime - even if already approved (robust behavior).
         
         Args:
             ticket: Task ticket ID
@@ -110,8 +111,20 @@ class QAService:
             logger.warning(f"QA submission not found for task {ticket}")
             return False
         
+        # Allow re-approval (robust behavior)
+        if submission.status == QAStatus.APPROVED:
+            logger.info(f"QA submission for {ticket} already approved, updating reviewer to {reviewer_id}")
+            reviewed_at = datetime.now()
+            await self.qa_repo.update_submission_status(
+                ticket,
+                QAStatus.APPROVED,
+                reviewer_id,
+                reviewed_at
+            )
+            return True
+        
         if submission.status != QAStatus.PENDING:
-            logger.warning(f"QA submission for {ticket} is not pending")
+            logger.warning(f"QA submission for {ticket} is not pending (status: {submission.status})")
             return False
         
         # Update submission status

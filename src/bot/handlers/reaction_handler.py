@@ -576,68 +576,16 @@ Have a productive day!""",
 
 async def process_issue_reactions(issue, user_id, added_reactions, removed_reactions,
                                  issue_service, context, config):
-    """Process reactions on issue messages."""
+    """
+    Process reactions on issue messages.
+    Robust: reactions work anytime, state transitions handled automatically.
+    """
     
-    # Process removed reactions FIRST (to handle state transitions like unresolve before re-claim)
-    for emoji in removed_reactions:
-        try:
-            if emoji == "👍":
-                # Check if ❤️ or 👎 was ADDED in the same update
-                # If yes, this is just Telegram replacing 👍 with ❤️/👎, not an actual unclaim
-                if "❤️" in added_reactions or "❤" in added_reactions or "👎" in added_reactions:
-                    logger.info(f"👍 removed but ❤️/👎 added in same update - skipping unclaim (this is resolution/rejection)")
-                    continue
-                
-                # Remove claim
-                success = await issue_service.unclaim_issue(issue.issue_ticket, user_id)
-                if success:
-                    logger.info(f"↩️ User {user_id} unclaimed issue {issue.issue_ticket}")
-                    
-                    # Send notification to issue creator if different user
-                    if issue.creator_id != user_id:
-                        try:
-                            await context.bot.send_message(
-                                chat_id=issue.creator_id,
-                                text=f"↩️ **Issue Unclaimed**\n\nIssue **{issue.issue_ticket}** is no longer claimed.\n\n**Task:** #{issue.ticket}\n**Issue:** {issue.title}",
-                                parse_mode='Markdown'
-                            )
-                        except Exception as e:
-                            logger.warning(f"Failed to send unclaim notification: {e}")
-            
-            elif emoji == "❤️" or emoji == "❤":
-                # Check if 👍 was ADDED in the same update (user changing from ❤️ to 👍)
-                if "👍" in added_reactions:
-                    logger.info(f"❤️ removed but 👍 added in same update - unresolving to allow re-claim")
-                    # Unresolve so the 👍 added reaction can claim it
-                    await issue_service.unresolve_issue(issue.issue_ticket)
-                    continue
-                
-                # Unresolve issue (revert to previous state)
-                success = await issue_service.unresolve_issue(issue.issue_ticket)
-                if success:
-                    logger.info(f"↩️ Issue {issue.issue_ticket} unresolved (❤️ removed)")
-            
-            elif emoji == "👎":
-                # Check if 👍 was ADDED in the same update
-                if "👍" in added_reactions:
-                    logger.info(f"👎 removed but 👍 added in same update - unrejecting to allow re-claim")
-                    # Unreject so the 👍 added reaction can claim it
-                    await issue_service.unreject_issue(issue.issue_ticket)
-                    continue
-                
-                # Unreject issue (revert to previous state)
-                success = await issue_service.unreject_issue(issue.issue_ticket)
-                if success:
-                    logger.info(f"↩️ Issue {issue.issue_ticket} unrejected (👎 removed)")
-        
-        except Exception as e:
-            logger.error(f"Error removing {emoji} reaction from issue {issue.ticket}: {e}", exc_info=True)
-    
-    # Process added reactions AFTER removed reactions
+    # Process added reactions (service methods handle state transitions)
     for emoji in added_reactions:
         try:
             if emoji == "👍":
-                # Claim issue
+                # Claim issue (works anytime, even if resolved)
                 success = await issue_service.claim_issue(issue.issue_ticket, user_id)
                 if success:
                     logger.info(f"👍 User {user_id} claimed issue {issue.issue_ticket}")
@@ -676,7 +624,6 @@ Your issue **{issue.issue_ticket}** has been claimed by {claimer_username}.
                             logger.warning(f"Failed to send claim notification to creator: {e}")
                     
                     # Send notification to task assignee if different from claimer and creator
-                    # Get task to find assignee
                     task_service = context.bot_data.get('task_service')
                     if task_service:
                         try:
@@ -700,7 +647,7 @@ An issue on your task **#{issue.ticket}** has been claimed by {claimer_username}
                             logger.warning(f"Failed to send claim notification to assignee: {e}")
             
             elif emoji == "❤️":
-                # Resolve issue
+                # Resolve issue (works anytime)
                 success = await issue_service.resolve_issue(issue.issue_ticket, user_id)
                 if success:
                     logger.info(f"❤️ User {user_id} resolved issue {issue.issue_ticket}")
@@ -739,6 +686,34 @@ An issue on your task **#{issue.ticket}** has been claimed by {claimer_username}
         
         except Exception as e:
             logger.error(f"Error processing {emoji} reaction on issue {issue.ticket}: {e}", exc_info=True)
+    
+    # Process removed reactions (only for unclaim, others are handled by added reactions)
+    for emoji in removed_reactions:
+        try:
+            if emoji == "👍":
+                # Only unclaim if NOT changing to ❤️ or 👎
+                if "❤️" in added_reactions or "❤" in added_reactions or "👎" in added_reactions:
+                    logger.info(f"👍 removed but ❤️/👎 added - skipping unclaim (state handled by added reaction)")
+                    continue
+                
+                # Remove claim
+                success = await issue_service.unclaim_issue(issue.issue_ticket, user_id)
+                if success:
+                    logger.info(f"↩️ User {user_id} unclaimed issue {issue.issue_ticket}")
+                    
+                    # Send notification to issue creator if different user
+                    if issue.creator_id != user_id:
+                        try:
+                            await context.bot.send_message(
+                                chat_id=issue.creator_id,
+                                text=f"↩️ **Issue Unclaimed**\n\nIssue **{issue.issue_ticket}** is no longer claimed.\n\n**Task:** #{issue.ticket}\n**Issue:** {issue.title}",
+                                parse_mode='Markdown'
+                            )
+                        except Exception as e:
+                            logger.warning(f"Failed to send unclaim notification: {e}")
+        
+        except Exception as e:
+            logger.error(f"Error removing {emoji} reaction from issue {issue.ticket}: {e}", exc_info=True)
 
 
 async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_reactions,

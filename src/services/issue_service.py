@@ -89,6 +89,7 @@ class IssueService:
     async def claim_issue(self, issue_ticket: str, user_id: int) -> bool:
         """
         Claim an issue (👍 reaction).
+        Works anytime - even if resolved (will unresolve and claim).
         
         Args:
             issue_ticket: Issue ticket ID (e.g., POV260404-I1)
@@ -103,9 +104,18 @@ class IssueService:
                 logger.warning(f"Issue {issue_ticket} not found for claim")
                 return False
             
+            # If resolved, unresolve it first (robust behavior)
             if issue.is_resolved:
-                logger.warning(f"Cannot claim resolved issue {issue_ticket}")
-                return False
+                logger.info(f"Issue {issue_ticket} is resolved, unresolving to allow claim")
+                issue.status = IssueStatus.IN_PROGRESS
+                issue.resolved_by = None
+                issue.resolved_at = None
+            
+            # If rejected, unreject it first
+            if issue.status == IssueStatus.INVALID:
+                logger.info(f"Issue {issue_ticket} is rejected, unrejecting to allow claim")
+                issue.status = IssueStatus.IN_PROGRESS
+                issue.rejected_by = None
             
             # Add claim
             if issue.add_claim(user_id):
@@ -113,6 +123,15 @@ class IssueService:
                 if success:
                     logger.info(f"User {user_id} claimed issue {issue_ticket}")
                     return True
+            else:
+                # User already claimed, just update status
+                if user_id in issue.claimed_by:
+                    if issue.status != IssueStatus.IN_PROGRESS:
+                        issue.status = IssueStatus.IN_PROGRESS
+                        success = await self.repository.update_issue(issue)
+                        if success:
+                            logger.info(f"User {user_id} re-claimed issue {issue_ticket} (status updated to IN_PROGRESS)")
+                            return True
             
             return False
             
@@ -153,6 +172,7 @@ class IssueService:
     async def resolve_issue(self, issue_ticket: str, user_id: int) -> bool:
         """
         Resolve an issue (❤️ reaction).
+        Works anytime - even if already resolved.
         
         Args:
             issue_ticket: Issue ticket ID (e.g., POV260404-I1)
@@ -167,9 +187,13 @@ class IssueService:
                 logger.warning(f"Issue {issue_ticket} not found for resolve")
                 return False
             
+            # Allow re-resolving (robust behavior)
             if issue.is_resolved:
-                logger.warning(f"Issue {issue_ticket} already resolved")
-                return False
+                logger.info(f"Issue {issue_ticket} already resolved, updating resolver to {user_id}")
+                issue.resolved_by = user_id
+                issue.resolved_at = datetime.now()
+                success = await self.repository.update_issue(issue)
+                return success
             
             # Resolve issue
             if issue.resolve(user_id):
