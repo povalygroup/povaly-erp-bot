@@ -99,6 +99,10 @@ class Issue:
     
     def remove_claim(self, user_id: int) -> bool:
         """Remove a user claim (remove 👍 reaction)."""
+        # Don't allow unclaim if issue is already resolved or invalid
+        if self.status in [IssueStatus.RESOLVED, IssueStatus.INVALID]:
+            return False
+        
         if user_id in self.claimed_by:
             self.claimed_by.remove(user_id)
             # If no more claims, revert to OPEN
