@@ -90,6 +90,51 @@ class QAService:
         
         return submission
     
+    async def claim_for_review(
+        self,
+        ticket: str,
+        reviewer_id: int
+    ) -> bool:
+        """
+        Claim a QA submission for review (👍 reaction).
+        Changes status from PENDING to IN_REVIEW.
+        
+        Args:
+            ticket: Task ticket ID
+            reviewer_id: User ID of reviewer claiming
+        
+        Returns:
+            True if claim was successful
+        """
+        submission = await self.qa_repo.get_submission(ticket)
+        if not submission:
+            logger.warning(f"QA submission not found for task {ticket}")
+            return False
+        
+        # Only claim if PENDING (not already approved/rejected)
+        if submission.status == QAStatus.PENDING:
+            await self.qa_repo.update_submission_status(
+                ticket,
+                QAStatus.IN_REVIEW,
+                reviewer_id,
+                datetime.now()
+            )
+            logger.info(f"QA for task {ticket} claimed for review by user {reviewer_id}")
+            return True
+        elif submission.status == QAStatus.IN_REVIEW:
+            # Already in review, just update reviewer
+            await self.qa_repo.update_submission_status(
+                ticket,
+                QAStatus.IN_REVIEW,
+                reviewer_id,
+                datetime.now()
+            )
+            logger.info(f"QA for task {ticket} re-claimed by user {reviewer_id}")
+            return True
+        else:
+            logger.warning(f"Cannot claim QA for {ticket} - status is {submission.status}")
+            return False
+    
     async def approve_qa(
         self,
         ticket: str,
@@ -123,8 +168,8 @@ class QAService:
             )
             return True
         
-        if submission.status != QAStatus.PENDING:
-            logger.warning(f"QA submission for {ticket} is not pending (status: {submission.status})")
+        if submission.status not in [QAStatus.PENDING, QAStatus.IN_REVIEW]:
+            logger.warning(f"QA submission for {ticket} is not pending/in_review (status: {submission.status})")
             return False
         
         # Update submission status
@@ -159,8 +204,8 @@ class QAService:
             logger.warning(f"QA submission not found for task {ticket}")
             return False
         
-        if submission.status != QAStatus.PENDING:
-            logger.warning(f"QA submission for {ticket} is not pending")
+        if submission.status not in [QAStatus.PENDING, QAStatus.IN_REVIEW]:
+            logger.warning(f"QA submission for {ticket} is not pending/in_review (status: {submission.status})")
             return False
         
         # Update submission status

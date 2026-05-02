@@ -2105,6 +2105,7 @@ async def cmd_myqa(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Group by status
         pending = [qa for qa in all_submissions if qa.status == QAStatus.PENDING]
+        in_review = [qa for qa in all_submissions if qa.status == QAStatus.IN_REVIEW]
         approved = [qa for qa in all_submissions if qa.status == QAStatus.APPROVED]
         rejected = [qa for qa in all_submissions if qa.status == QAStatus.REJECTED]
         
@@ -2128,6 +2129,14 @@ async def cmd_myqa(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 response += f"• [#{qa.ticket}]({qa_link}) - {qa.asset[:50]}\n"
             response += "\n"
         
+        # In Review submissions
+        if in_review:
+            response += f"🔍 **IN REVIEW** ({len(in_review)})\n"
+            for qa in in_review[:10]:  # Limit to 10
+                qa_link = f"https://t.me/c/{group_id_clean}/{config.TOPIC_QA_REVIEW}/{qa.message_id}"
+                response += f"• [#{qa.ticket}]({qa_link}) - {qa.asset[:50]}\n"
+            response += "\n"
+        
         # Approved submissions
         if approved:
             response += f"✅ **APPROVED** ({len(approved)})\n"
@@ -2145,7 +2154,7 @@ async def cmd_myqa(update: Update, context: ContextTypes.DEFAULT_TYPE):
             response += "\n"
         
         response += f"**Total:** {len(all_submissions)} submission(s)\n\n"
-        response += "**Status Legend:** ⏳ Pending | ✅ Approved | ❌ Rejected\n\n"
+        response += "**Status Legend:** ⏳ Pending | 🔍 In Review | ✅ Approved | ❌ Rejected\n\n"
         response += "⚠️ _This message will auto-delete in 40 seconds. React with 👏 to keep it for 10 minutes._"
         
         await send_auto_delete_message(

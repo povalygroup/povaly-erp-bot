@@ -770,34 +770,38 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
         try:
             if emoji == "👍":
                 # Claim QA for review
-                logger.info(f"👍 User {user_id} claimed QA {qa_submission.ticket} for review")
-                
-                # Send notification to submitter
-                try:
-                    user_repo = context.bot_data.get('user_repository')
-                    reviewer_username = "a reviewer"
-                    if user_repo:
-                        reviewer = await user_repo.get_user(user_id)
-                        if reviewer and reviewer.username:
-                            reviewer_username = f"@{reviewer.username}"
+                success = await qa_service.claim_for_review(qa_submission.ticket, user_id)
+                if success:
+                    logger.info(f"👍 User {user_id} claimed QA {qa_submission.ticket} for review")
                     
-                    await context.bot.send_message(
-                        chat_id=qa_submission.submitter_id,
-                        text=f"👍 **QA Review Started**\n\nYour QA submission for task **#{qa_submission.ticket}** is being reviewed by {reviewer_username}.",
-                        parse_mode='Markdown'
-                    )
-                    logger.info(f"Sent review claim notification to submitter {qa_submission.submitter_id}")
-                except Exception as e:
-                    logger.warning(f"Failed to send claim notification: {e}")
+                    # Send notification to submitter
+                    try:
+                        user_repo = context.bot_data.get('user_repository')
+                        reviewer_username = "a reviewer"
+                        if user_repo:
+                            reviewer = await user_repo.get_user(user_id)
+                            if reviewer and reviewer.username:
+                                reviewer_username = f"@{reviewer.username}"
+                        
+                        await context.bot.send_message(
+                            chat_id=qa_submission.submitter_id,
+                            text=f"👍 **QA Review Started**\n\nYour QA submission for task **#{qa_submission.ticket}** is being reviewed by {reviewer_username}.",
+                            parse_mode='Markdown'
+                        )
+                        logger.info(f"Sent review claim notification to submitter {qa_submission.submitter_id}")
+                    except Exception as e:
+                        logger.warning(f"Failed to send claim notification: {e}")
+                else:
+                    logger.warning(f"Failed to claim QA {qa_submission.ticket} for review")
             
             elif emoji == "❤️" or emoji == "❤":
                 # Approve QA submission
                 logger.info(f"🔍 Entered ❤️ approval block for QA {qa_submission.ticket}")
-                if qa_submission.status != QAStatus.PENDING:
-                    logger.warning(f"QA {qa_submission.ticket} is not pending (status: {qa_submission.status})")
+                if qa_submission.status not in [QAStatus.PENDING, QAStatus.IN_REVIEW]:
+                    logger.warning(f"QA {qa_submission.ticket} is not pending/in_review (status: {qa_submission.status})")
                     await send_invalid_reaction_warning(
                         context, user_id, "❤️", "QA submission", f"#{qa_submission.ticket}",
-                        f"This reaction only works when QA is in **PENDING** status.\n\nCurrent status: **{qa_submission.status.value}**\n\nThis QA has already been processed.",
+                        f"This reaction only works when QA is in **PENDING** or **IN_REVIEW** status.\n\nCurrent status: **{qa_submission.status.value}**\n\nThis QA has already been processed.",
                         qa_link
                     )
                     continue
@@ -858,11 +862,11 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
             elif emoji == "👎":
                 # Reject QA submission
                 # Note: Should use /reject command for proper reason, but allow reaction for quick reject
-                if qa_submission.status != QAStatus.PENDING:
-                    logger.warning(f"QA {qa_submission.ticket} is not pending (status: {qa_submission.status})")
+                if qa_submission.status not in [QAStatus.PENDING, QAStatus.IN_REVIEW]:
+                    logger.warning(f"QA {qa_submission.ticket} is not pending/in_review (status: {qa_submission.status})")
                     await send_invalid_reaction_warning(
                         context, user_id, "👎", "QA submission", f"#{qa_submission.ticket}",
-                        f"This reaction only works when QA is in **PENDING** status.\n\nCurrent status: **{qa_submission.status.value}**\n\nThis QA has already been processed.",
+                        f"This reaction only works when QA is in **PENDING** or **IN_REVIEW** status.\n\nCurrent status: **{qa_submission.status.value}**\n\nThis QA has already been processed.",
                         qa_link
                     )
                     continue

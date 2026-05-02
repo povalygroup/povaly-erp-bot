@@ -10,6 +10,7 @@ class QAStatus(str, Enum):
     """QA submission status enumeration."""
     
     PENDING = "PENDING"
+    IN_REVIEW = "IN_REVIEW"
     APPROVED = "APPROVED"
     REJECTED = "REJECTED"
 
