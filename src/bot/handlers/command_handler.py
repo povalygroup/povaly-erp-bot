@@ -1519,15 +1519,31 @@ async def cmd_newqa(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"cmd_newqa called by user {user_id} in topic {topic_id}")
     
     if not task_service:
-        await send_auto_delete_message(
-            context=context,
-            chat_id=update.message.chat_id,
-            text="❌ Service not available",
-            parse_mode='Markdown',
-            message_thread_id=topic_id,
-            delete_after_seconds=15,
-            warning_text=True
-        )
+        # Delete command message
+        try:
+            await update.message.delete()
+        except:
+            pass
+        
+        # Send error to DM
+        try:
+            sent_msg = await context.bot.send_message(
+                chat_id=user_id,
+                text="❌ Service not available\n\n_This message will auto-delete in 15 seconds_",
+                parse_mode='Markdown'
+            )
+            logger.info(f"Sent /newqa error to DM for user {user_id}")
+            
+            # Auto-delete after 15 seconds
+            async def delete_dm():
+                await asyncio.sleep(15)
+                try:
+                    await sent_msg.delete()
+                except:
+                    pass
+            asyncio.create_task(delete_dm())
+        except Exception as e:
+            logger.error(f"Failed to send DM to user {user_id}: {e}")
         return
     
     # MODE 1: Direct command with ticket - /newqa #POV260406 <asset> [@reviewer]
@@ -1583,22 +1599,34 @@ async def cmd_newqa(update: Update, context: ContextTypes.DEFAULT_TYPE):
 [ASSET] https://link.com or description
 ```
 
-**Note:** Reviewer mention is optional."""
+**Note:** Reviewer mention is optional.
+
+_This message will auto-delete in 30 seconds_"""
         
         try:
             await update.message.delete()
         except:
             pass
         
-        await send_auto_delete_message(
-            context=context,
-            chat_id=update.message.chat_id,
-            text=help_msg,
-            parse_mode='Markdown',
-            message_thread_id=topic_id,
-            delete_after_seconds=30,
-            warning_text=True
-        )
+        # Send help to DM
+        try:
+            sent_msg = await context.bot.send_message(
+                chat_id=user_id,
+                text=help_msg,
+                parse_mode='Markdown'
+            )
+            logger.info(f"Sent /newqa help to DM for user {user_id}")
+            
+            # Auto-delete after 30 seconds
+            async def delete_dm():
+                await asyncio.sleep(30)
+                try:
+                    await sent_msg.delete()
+                except:
+                    pass
+            asyncio.create_task(delete_dm())
+        except Exception as e:
+            logger.error(f"Failed to send DM to user {user_id}: {e}")
         return
     
     # Extract ticket from replied message
@@ -1655,15 +1683,25 @@ Reply to a task message with:
         except:
             pass
         
-        await send_auto_delete_message(
-            context=context,
-            chat_id=update.message.chat_id,
-            text="❌ Could not find ticket in the replied message. Please reply to a task message with a valid ticket ID.",
-            parse_mode='Markdown',
-            message_thread_id=topic_id,
-            delete_after_seconds=15,
-            warning_text=True
-        )
+        # Send error to DM
+        try:
+            sent_msg = await context.bot.send_message(
+                chat_id=user_id,
+                text="❌ Could not find ticket in the replied message. Please reply to a task message with a valid ticket ID.\n\n_This message will auto-delete in 15 seconds_",
+                parse_mode='Markdown'
+            )
+            logger.info(f"Sent /newqa error to DM for user {user_id}")
+            
+            # Auto-delete after 15 seconds
+            async def delete_dm():
+                await asyncio.sleep(15)
+                try:
+                    await sent_msg.delete()
+                except:
+                    pass
+            asyncio.create_task(delete_dm())
+        except Exception as e:
+            logger.error(f"Failed to send DM to user {user_id}: {e}")
         return
     
     ticket = ticket_match.group(1)
@@ -3436,15 +3474,16 @@ async def cmd_newissue(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 # If in Core Operations without valid ticket in reply, fall through to task menu
                 if topic_id != config.TOPIC_CORE_OPERATIONS:
                     logger.warning(f"Could not extract ticket from replied message")
-                    await send_auto_delete_message(
-                        context=context,
-                        chat_id=update.message.chat_id,
-                        text="❌ Could not find ticket in the replied message. Please reply to a task message with a valid ticket ID.",
-                        parse_mode='Markdown',
-                        message_thread_id=topic_id,
-                        delete_after_seconds=15,
-                        warning_text=True
-                    )
+                    # Send error to DM
+                    try:
+                        await context.bot.send_message(
+                            chat_id=user_id,
+                            text="❌ Could not find ticket in the replied message. Please reply to a task message with a valid ticket ID.\n\n_This message will auto-delete in 15 seconds_",
+                            parse_mode='Markdown'
+                        )
+                        logger.info(f"Sent /newissue error to DM for user {user_id}")
+                    except Exception as e:
+                        logger.error(f"Failed to send DM to user {user_id}: {e}")
                     return
     
     # MODE 3: Direct command in Core Operations without arguments (or with invalid reply)
@@ -3453,7 +3492,7 @@ async def cmd_newissue(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.info(f"Showing task selection menu in Core Operations")
         await show_task_selection_menu(update, context)
     else:
-        # Not in Core Operations and no reply/argument - show help
+        # Not in Core Operations and no reply/argument - show help in DM
         help_msg = """🚨 **Create New Issue**
 
 **Usage:**
@@ -3461,17 +3500,28 @@ async def cmd_newissue(update: Update, context: ContextTypes.DEFAULT_TYPE):
 • `/newissue #POV260414` - Creates issue for specific ticket
 • Use `/newissue` in Core Operations topic to select from task list
 
-**Note:** Issue creation happens in Core Operations topic."""
+**Note:** Issue creation happens in Core Operations topic.
+
+_This message will auto-delete in 20 seconds_"""
         
-        await send_auto_delete_message(
-            context=context,
-            chat_id=update.message.chat_id,
-            text=help_msg,
-            parse_mode='Markdown',
-            message_thread_id=topic_id,
-            delete_after_seconds=20,
-            warning_text=True
-        )
+        try:
+            sent_msg = await context.bot.send_message(
+                chat_id=user_id,
+                text=help_msg,
+                parse_mode='Markdown'
+            )
+            logger.info(f"Sent /newissue help to DM for user {user_id}")
+            
+            # Auto-delete after 20 seconds
+            async def delete_dm():
+                await asyncio.sleep(20)
+                try:
+                    await sent_msg.delete()
+                except:
+                    pass
+            asyncio.create_task(delete_dm())
+        except Exception as e:
+            logger.error(f"Failed to send DM to user {user_id}: {e}")
 
 
 async def send_priority_selection_to_core_ops(update: Update, context: ContextTypes.DEFAULT_TYPE, ticket: str, user_id: int):
@@ -3536,18 +3586,31 @@ async def send_priority_selection_to_core_ops(update: Update, context: ContextTy
         
         priority_link = f"https://t.me/c/{group_id_clean}/{config.TOPIC_CORE_OPERATIONS}/{priority_msg.message_id}"
         
-        # Send confirmation to user in original topic
+        # Send confirmation to user in DM
         confirmation = f"✅ **Issue Creation Started**\n\n"
         confirmation += f"Priority selection sent to **Core Operations** topic for task **#{ticket}**.\n\n"
-        confirmation += f"[👉 Click here to select priority]({priority_link})"
+        confirmation += f"[👉 Click here to select priority]({priority_link})\n\n"
+        confirmation += f"_This message will auto-delete in 10 seconds_"
         
-        await send_auto_delete_message(
-            context=context,
-            chat_id=update.message.chat_id,
-            text=confirmation,
-            parse_mode='Markdown',
-            message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
-            delete_after_seconds=10,
+        try:
+            sent_msg = await context.bot.send_message(
+                chat_id=user_id,
+                text=confirmation,
+                parse_mode='Markdown',
+                disable_web_page_preview=True
+            )
+            logger.info(f"Sent /newissue confirmation to DM for user {user_id}")
+            
+            # Auto-delete after 10 seconds
+            async def delete_dm():
+                await asyncio.sleep(10)
+                try:
+                    await sent_msg.delete()
+                except:
+                    pass
+            asyncio.create_task(delete_dm())
+        except Exception as e:
+            logger.error(f"Failed to send DM to user {user_id}: {e}")
             warning_text=True
         )
         
