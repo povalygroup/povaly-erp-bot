@@ -784,27 +784,27 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
         try:
             if emoji == "👍":
                 # Fetch latest QA status (might have been updated by added reactions)
-                qa_submission = await qa_repo.get_submission_by_message_id(message_id)
-                if not qa_submission:
+                latest_qa = await qa_repo.get_submission_by_message_id(qa_submission.message_id)
+                if not latest_qa:
                     continue
                 
                 # Only send unclaim notification if QA is still PENDING
                 # Don't send if already approved/rejected
-                if qa_submission.status == QAStatus.PENDING:
+                if latest_qa.status == QAStatus.PENDING:
                     # Remove reviewer claim
-                    logger.info(f"↩️ User {user_id} unclaimed QA {qa_submission.ticket}")
+                    logger.info(f"↩️ User {user_id} unclaimed QA {latest_qa.ticket}")
                     
                     # Send notification to submitter
                     try:
                         await context.bot.send_message(
-                            chat_id=qa_submission.submitter_id,
-                            text=f"↩️ **QA Review Unclaimed**\n\nQA submission for task **#{qa_submission.ticket}** is no longer being reviewed.\n\nWaiting for another reviewer to claim it.",
+                            chat_id=latest_qa.submitter_id,
+                            text=f"↩️ **QA Review Unclaimed**\n\nQA submission for task **#{latest_qa.ticket}** is no longer being reviewed.\n\nWaiting for another reviewer to claim it.",
                             parse_mode='Markdown'
                         )
                     except Exception as e:
                         logger.warning(f"Failed to send unclaim notification: {e}")
                 else:
-                    logger.debug(f"Ignoring 👍 removal on QA {qa_submission.ticket} - already {qa_submission.status}")
+                    logger.debug(f"Ignoring 👍 removal on QA {latest_qa.ticket} - already {latest_qa.status}")
             
             elif emoji == "❤️":
                 # Revert approval (if needed)
