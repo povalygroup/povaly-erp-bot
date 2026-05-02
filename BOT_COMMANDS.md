@@ -281,7 +281,7 @@ TOPIC_TRASH=5
 #### Database
 ```bash
 DATABASE_TYPE=sqlite
-DATABASE_PATH=./data/test_first_task.db
+DATABASE_PATH=./data/povaly_erp_bot.db
 DATABASE_BACKUP_TIME=23:00
 ```
 
@@ -332,7 +332,7 @@ MANAGERS=MANAGER_ID_1,MANAGER_ID_2
 #### Manual Backup
 ```bash
 # Create backup with timestamp
-cp data/test_first_task.db data/backups/backup_$(date +%Y%m%d_%H%M%S).db
+cp data/povaly_erp_bot.db data/backups/backup_$(date +%Y%m%d_%H%M%S).db
 
 # Example: backup_20260502_143022.db
 ```
@@ -352,34 +352,34 @@ ls -lh data/backups/
 
 #### List All Tables
 ```bash
-sqlite3 data/test_first_task.db ".tables"
+sqlite3 data/povaly_erp_bot.db ".tables"
 ```
 
 #### View Tasks
 ```bash
-sqlite3 data/test_first_task.db "SELECT ticket, state, assignee_id FROM tasks;"
+sqlite3 data/povaly_erp_bot.db "SELECT ticket, state, assignee_id FROM tasks;"
 ```
 
 #### View QA Submissions
 ```bash
-sqlite3 data/test_first_task.db "SELECT ticket, status, submitter_id FROM qa_submissions;"
+sqlite3 data/povaly_erp_bot.db "SELECT ticket, status, submitter_id FROM qa_submissions;"
 ```
 
 #### View Users
 ```bash
-sqlite3 data/test_first_task.db "SELECT user_id, username, role FROM users;"
+sqlite3 data/povaly_erp_bot.db "SELECT user_id, username, role FROM users;"
 ```
 
 #### Count Records
 ```bash
 # Count tasks
-sqlite3 data/test_first_task.db "SELECT COUNT(*) FROM tasks;"
+sqlite3 data/povaly_erp_bot.db "SELECT COUNT(*) FROM tasks;"
 
 # Count QA submissions
-sqlite3 data/test_first_task.db "SELECT COUNT(*) FROM qa_submissions;"
+sqlite3 data/povaly_erp_bot.db "SELECT COUNT(*) FROM qa_submissions;"
 
 # Count users
-sqlite3 data/test_first_task.db "SELECT COUNT(*) FROM users;"
+sqlite3 data/povaly_erp_bot.db "SELECT COUNT(*) FROM users;"
 ```
 
 ---
@@ -391,10 +391,10 @@ sqlite3 data/test_first_task.db "SELECT COUNT(*) FROM users;"
 ./stop_bot.sh
 
 # 2. Backup current database (safety)
-cp data/test_first_task.db data/test_first_task.db.before_restore
+cp data/povaly_erp_bot.db data/povaly_erp_bot.db.before_restore
 
 # 3. Restore from backup
-cp data/backups/BACKUP_FILE_NAME.db data/test_first_task.db
+cp data/backups/BACKUP_FILE_NAME.db data/povaly_erp_bot.db
 
 # 4. Start bot
 nohup ./start_bot_forever.sh &
@@ -677,7 +677,7 @@ cd povaly-bot/povaly-erp-bot/
 grep ERROR bot.log | tail -20
 
 # Check database
-sqlite3 data/test_first_task.db "SELECT COUNT(*) FROM tasks;"
+sqlite3 data/povaly_erp_bot.db "SELECT COUNT(*) FROM tasks;"
 
 # Check disk space
 df -h
@@ -692,7 +692,7 @@ ssh -p 65002 u531179370@145.79.25.42
 cd povaly-bot/povaly-erp-bot/
 
 # Create backup
-cp data/test_first_task.db data/backups/backup_before_update_$(date +%Y%m%d_%H%M%S).db
+cp data/povaly_erp_bot.db data/backups/backup_before_update_$(date +%Y%m%d_%H%M%S).db
 
 # Verify backup
 ls -lh data/backups/
@@ -730,13 +730,13 @@ cd povaly-bot/povaly-erp-bot/
 ./stop_bot.sh
 
 # Backup current (corrupted) database
-cp data/test_first_task.db data/test_first_task.db.corrupted
+cp data/povaly_erp_bot.db data/povaly_erp_bot.db.corrupted
 
 # List available backups
 ls -lh data/backups/
 
 # Restore from backup
-cp data/backups/BACKUP_FILE.db data/test_first_task.db
+cp data/backups/BACKUP_FILE.db data/povaly_erp_bot.db
 
 # Start bot
 nohup ./start_bot_forever.sh &
@@ -764,7 +764,7 @@ tail -50 bot.log
 | **Pull updates** | `git pull origin main` |
 | **Edit config** | `nano .env` |
 | **Restart bot** | `./stop_bot.sh && nohup ./start_bot_forever.sh &` |
-| **Backup database** | `cp data/test_first_task.db data/backups/backup_$(date +%Y%m%d_%H%M%S).db` |
+| **Backup database** | `cp data/povaly_erp_bot.db data/backups/backup_$(date +%Y%m%d_%H%M%S).db` |
 | **Check disk space** | `df -h` |
 | **Search errors** | `grep ERROR bot.log \| tail -20` |
 
@@ -777,7 +777,7 @@ tail -50 bot.log
 | **Bot code** | `~/povaly-bot/povaly-erp-bot/` |
 | **Main log** | `bot.log` |
 | **Error logs** | `data/logs/errors.log` |
-| **Database** | `data/test_first_task.db` |
+| **Database** | `data/povaly_erp_bot.db` |
 | **Backups** | `data/backups/` |
 | **Configuration** | `.env` |
 | **Start script** | `start_bot_forever.sh` |
@@ -793,7 +793,7 @@ tail -50 bot.log
 | **Force kill all bot processes** | `pkill -9 -f "python3 -m src.main"` |
 | **Force kill supervisor** | `pkill -9 -f "start_bot_forever.sh"` |
 | **Check running processes** | `ps aux \| grep python` |
-| **Restore from backup** | `cp data/backups/BACKUP.db data/test_first_task.db` |
+| **Restore from backup** | `cp data/backups/BACKUP.db data/povaly_erp_bot.db` |
 | **Clear all logs** | `> bot.log` |
 | **Fix permissions** | `chmod +x *.sh` |
 
