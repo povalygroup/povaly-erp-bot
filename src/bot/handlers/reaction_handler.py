@@ -942,7 +942,11 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
     logger.info(f"✅ Finished processing added reactions")
     
     # Process removed reactions
+    # IMPORTANT: If we just processed added reactions (like ❤️ approval), 
+    # skip processing removed reactions to avoid sending conflicting notifications
     logger.info(f"🔍 Starting to process {len(removed_reactions)} removed reactions: {removed_reactions}")
+    logger.info(f"🔍 Added reactions in this update: {added_reactions}")
+    
     for emoji in removed_reactions:
         logger.info(f"🔍 Processing removed emoji: {emoji} (repr: {repr(emoji)})")
         try:
@@ -952,7 +956,14 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
                 logger.info(f"🔍 Checking if ❤️ or 👎 in added_reactions: {added_reactions}")
                 logger.info(f"🔍 '❤️' in added_reactions: {'❤️' in added_reactions}")
                 logger.info(f"🔍 '👎' in added_reactions: {'👎' in added_reactions}")
-                if "❤️" in added_reactions or "👎" in added_reactions:
+                
+                # Check using both string comparison and set membership
+                has_love = "❤️" in added_reactions or "❤" in added_reactions
+                has_thumbs_down = "👎" in added_reactions
+                
+                logger.info(f"🔍 has_love: {has_love}, has_thumbs_down: {has_thumbs_down}")
+                
+                if has_love or has_thumbs_down:
                     logger.info(f"👍 removed but ❤️/👎 added in same update - skipping unclaim notification (this is approval/rejection)")
                     continue
                 
