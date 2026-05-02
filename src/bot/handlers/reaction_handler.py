@@ -966,36 +966,16 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
                     logger.debug(f"Ignoring 👍 removal on QA {latest_qa.ticket} - already {latest_qa.status}")
             
             elif emoji == "❤️":
-                # Revert approval (if needed)
-                if qa_submission.status == QAStatus.APPROVED:
-                    logger.info(f"↩️ Reverting QA {qa_submission.ticket} from APPROVED to PENDING")
-                    await qa_repo.update_submission_status(
-                        qa_submission.ticket, QAStatus.PENDING, None, None
-                    )
-                    
-                    # Revert task state
-                    task_service = context.bot_data.get('task_service')
-                    if task_service:
-                        from src.data.models.task import TaskState
-                        await task_service.task_repo.update_task_state(
-                            qa_submission.ticket, TaskState.QA_SUBMITTED, datetime.now()
-                        )
+                # DO NOT revert approval when ❤️ is removed
+                # Once QA is approved, it should stay approved
+                # Removing the reaction is just a UI action, not a state change
+                logger.debug(f"❤️ removed from QA {qa_submission.ticket} - ignoring (QA stays APPROVED)")
             
             elif emoji == "👎":
-                # Revert rejection
-                if qa_submission.status == QAStatus.REJECTED:
-                    logger.info(f"↩️ Reverting QA {qa_submission.ticket} from REJECTED to PENDING")
-                    await qa_repo.update_submission_status(
-                        qa_submission.ticket, QAStatus.PENDING, None, None
-                    )
-                    
-                    # Revert task state
-                    task_service = context.bot_data.get('task_service')
-                    if task_service:
-                        from src.data.models.task import TaskState
-                        await task_service.task_repo.update_task_state(
-                            qa_submission.ticket, TaskState.QA_SUBMITTED, datetime.now()
-                        )
+                # DO NOT revert rejection when 👎 is removed
+                # Once QA is rejected, it should stay rejected
+                # Removing the reaction is just a UI action, not a state change
+                logger.debug(f"👎 removed from QA {qa_submission.ticket} - ignoring (QA stays REJECTED)")
         
         except Exception as e:
             logger.error(f"Error removing {emoji} reaction from QA {qa_submission.ticket}: {e}", exc_info=True)
