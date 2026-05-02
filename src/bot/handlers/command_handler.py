@@ -22,6 +22,38 @@ from src.bot.templates import (
 logger = logging.getLogger(__name__)
 
 
+async def send_dm_with_autodelete(context, user_id, text, delete_after=15):
+    """
+    Send a DM message with auto-delete.
+    
+    Args:
+        context: Telegram context
+        user_id: User ID to send DM to
+        text: Message text
+        delete_after: Seconds before auto-delete (default 15)
+    """
+    try:
+        sent_msg = await context.bot.send_message(
+            chat_id=user_id,
+            text=f"{text}\n\n_This message will auto-delete in {delete_after} seconds_",
+            parse_mode='Markdown'
+        )
+        logger.info(f"Sent DM to user {user_id}")
+        
+        # Auto-delete after specified seconds
+        async def delete_dm():
+            await asyncio.sleep(delete_after)
+            try:
+                await sent_msg.delete()
+            except:
+                pass
+        asyncio.create_task(delete_dm())
+        return sent_msg
+    except Exception as e:
+        logger.error(f"Failed to send DM to user {user_id}: {e}")
+        return None
+
+
 def is_privileged_user(user_id: int, config: Config) -> bool:
     """Check if user is admin, manager, or owner."""
     if not config:
@@ -1730,57 +1762,25 @@ Reply to a task message with:
         logger.warning(f"Failed to delete /newqa command: {e}")
     
     if not task_service:
-        await send_auto_delete_message(
-            context=context,
-            chat_id=update.message.chat_id,
-            text="❌ Service not available",
-            parse_mode='Markdown',
-            message_thread_id=topic_id,
-            delete_after_seconds=15,
-            warning_text=True
-        )
+        await send_dm_with_autodelete(context, user_id, "❌ Service not available", 15)
         return
     
     try:
         # Verify task exists
         task = await task_service.get_task(ticket)
         if not task:
-            await send_auto_delete_message(
-                context=context,
-                chat_id=update.message.chat_id,
-                text=f"❌ Task `{ticket}` not found.",
-                parse_mode='Markdown',
-                message_thread_id=topic_id,
-                delete_after_seconds=15,
-                warning_text=True
-            )
+            await send_dm_with_autodelete(context, user_id, f"❌ Task `{ticket}` not found.", 15)
             return
         
         # Verify user is the assignee
         if task.assignee_id != user_id:
-            await send_auto_delete_message(
-                context=context,
-                chat_id=update.message.chat_id,
-                text=f"❌ You are not assigned to task `{ticket}`.",
-                parse_mode='Markdown',
-                message_thread_id=topic_id,
-                delete_after_seconds=15,
-                warning_text=True
-            )
+            await send_dm_with_autodelete(context, user_id, f"❌ You are not assigned to task `{ticket}`.", 15)
             return
         
         # Verify task is in STARTED state
         from src.data.models.task import TaskState
         if task.state != TaskState.STARTED:
-            await send_auto_delete_message(
-                context=context,
-                chat_id=update.message.chat_id,
-                text=f"❌ Task `{ticket}` is not in STARTED state. Current state: {task.state.value}",
-                parse_mode='Markdown',
-                message_thread_id=topic_id,
-                delete_after_seconds=15,
-                warning_text=True
-            )
+            await send_dm_with_autodelete(context, user_id, f"❌ Task `{ticket}` is not in STARTED state. Current state: {task.state.value}", 15)
             return
         
         # Check if QA already exists for this ticket
@@ -1789,15 +1789,7 @@ Reply to a task message with:
         existing_qa = await qa_repo.get_submission(ticket)
         
         if existing_qa and existing_qa.status.value == 'PENDING':
-            await send_auto_delete_message(
-                context=context,
-                chat_id=update.message.chat_id,
-                text=f"❌ QA submission already exists for task `{ticket}` with status: {existing_qa.status.value}",
-                parse_mode='Markdown',
-                message_thread_id=topic_id,
-                delete_after_seconds=15,
-                warning_text=True
-            )
+            await send_dm_with_autodelete(context, user_id, f"❌ QA submission already exists for task `{ticket}` with status: {existing_qa.status.value}", 15)
             return
         
         # Get brand display name (GSM -> GSMAura, VRB -> VorosaBajar, POV -> Povaly)
