@@ -9,18 +9,26 @@
 
 📝 ISSUE ENTRY FORMAT (MANDATORY)
 
-[TICKET] #POV-XXXX-XX (existing task ticket)
-[ISSUE] Short title
-[DETAILS] Clear explanation
-[PRIORITY] LOW / MEDIUM / HIGH / CRITICAL
+[TICKET] #POV260501 (existing task ticket - required)
+[ISSUETICKET] #POV260501-I1 (optional - auto-generated if not provided)
+[ISSUE] Short title (required)
+[DETAILS] Clear explanation (required)
+[PRIORITY] LOW / MEDIUM / HIGH / CRITICAL (required)
 [ASSIGNEE] @username (optional)
 
-Example:
+Example 1 (with ISSUETICKET):
 [TICKET] POV260501
+[ISSUETICKET] POV260501-I1
 [ISSUE] Database connection timeout
 [DETAILS] Getting timeout errors when querying user data
 [PRIORITY] HIGH
 [ASSIGNEE] @tech.lead
+
+Example 2 (without ISSUETICKET - will be auto-generated):
+[TICKET] POV260501
+[ISSUE] API response delay
+[DETAILS] API taking more than 5 seconds to respond
+[PRIORITY] MEDIUM
 
 🔄 REACTION-BASED SYSTEM
 

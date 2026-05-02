@@ -234,10 +234,16 @@ EOF
 
 chmod +x "$BOT_DIR/start_bot_forever.sh"
 
-# Setup cron for monitoring
+# Setup cron for monitoring (skip if crontab not available)
 echo ""
-echo "Setting up cron job for monitoring..."
-(crontab -l 2>/dev/null | grep -v "check_bot_alive.sh"; echo "*/5 * * * * $BOT_DIR/check_bot_alive.sh >> $BOT_DIR/cron.log 2>&1") | crontab -
+if command -v crontab &> /dev/null; then
+    echo "Setting up cron job for monitoring..."
+    (crontab -l 2>/dev/null | grep -v "check_bot_alive.sh"; echo "*/5 * * * * $BOT_DIR/check_bot_alive.sh >> $BOT_DIR/cron.log 2>&1") | crontab -
+    echo "✅ Cron job installed"
+else
+    echo "⚠️  Crontab not available (shared hosting)"
+    echo "   Auto-restart will work via supervisor only"
+fi
 
 # Create check_bot_alive.sh for cron
 cat > "$BOT_DIR/check_bot_alive.sh" << 'EOF'
