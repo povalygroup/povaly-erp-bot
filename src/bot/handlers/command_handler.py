@@ -1667,49 +1667,6 @@ _This message will auto-delete in 30 seconds_"""
     import re
     ticket_match = re.search(r'#?([A-Z]{2,4}\d{6})', replied_text)
     
-    # Must be a reply to task message
-    if not update.message.reply_to_message:
-        help_msg = """📋 **Submit for QA Review**
-
-**Usage:**
-Reply to a task message with:
-`/newqa <asset description> [@reviewer]`
-
-**Examples:**
-• `/newqa https://gsmaura.com/blog/article`
-• `/newqa Video thumbnail @reviewer`
-• `/newqa Follow the file` (with file attached)
-
-**Manual Format (in QA & Review topic):**
-```
-[TICKET] #POV260406
-[BRAND] #GSMAura
-[ASSET] https://link.com or description
-```
-
-**Note:** Reviewer mention is optional."""
-        
-        try:
-            await update.message.delete()
-        except:
-            pass
-        
-        await send_auto_delete_message(
-            context=context,
-            chat_id=update.message.chat_id,
-            text=help_msg,
-            parse_mode='Markdown',
-            message_thread_id=topic_id,
-            delete_after_seconds=30,
-            warning_text=True
-        )
-        return
-    
-    # Extract ticket from replied message
-    replied_text = update.message.reply_to_message.text or ""
-    import re
-    ticket_match = re.search(r'#?([A-Z]{2,4}\d{6})', replied_text)
-    
     if not ticket_match:
         try:
             await update.message.delete()
