@@ -1,0 +1,107 @@
+📋 BOARDROOM GUIDE — MEETING NOTES & DECISIONS
+
+🎯 PURPOSE: Record meeting notes, decisions, and action items.
+
+📝 MEETING NOTES FORMAT
+
+[MEETING] Meeting title
+[DATE] YYYY-MM-DD
+[TIME] HH:MM - HH:MM
+[ATTENDEES] @user1, @user2, @user3
+[AGENDA] What was discussed
+[DECISIONS] What was decided
+[ACTION_ITEMS] Who does what by when
+[NEXT_MEETING] YYYY-MM-DD (if scheduled)
+
+Example:
+[MEETING] Q2 Planning
+[DATE] 2026-04-28
+[TIME] 10:00 - 11:30
+[ATTENDEES] @ceo, @manager1, @lead.dev
+[AGENDA] Q2 goals, resources, timeline
+[DECISIONS] Focus on mobile, hire 2 devs, launch by June 30
+[ACTION_ITEMS]
+• @manager1: Hiring plan by May 5
+• @lead.dev: Tech roadmap by May 3
+• @ceo: Budget approval by May 1
+[NEXT_MEETING] 2026-05-12
+
+🔄 ACTION ITEM TRACKING
+
+Reactions track status:
+👍 = ACKNOWLEDGED (I'll do this)
+🔄 = IN_PROGRESS (Working on it)
+❤️ = COMPLETED (Finished)
+👎 = BLOCKED (Need help)
+
+⚡ COMMANDS
+
+/meetings - View all notes
+/meeting TITLE - View full notes
+/myactions - View your action items
+/actionitems - View all items (managers)
+/actionstatus - View status
+/postmeeting - Post new notes
+
+👑 FOR ORGANIZERS
+
+WORKFLOW:
+1. Schedule meeting
+2. Take notes
+3. Record decisions
+4. Assign action items
+5. Post notes within 24 hours
+6. Track progress
+7. Follow up
+
+⚠️ Important:
+• Post notes quickly
+• Be specific about items
+• Include clear deadlines
+• Assign to specific people
+• Follow up on progress
+
+👷 FOR EMPLOYEES
+
+WORKFLOW:
+1. Attend meeting
+2. Participate actively
+3. Review notes after
+4. Acknowledge action items (👍)
+5. Update status as you progress (🔄)
+6. Mark complete (❤️)
+7. Report results
+
+⚠️ Important:
+• Attend on time
+• Participate actively
+• Review notes
+• Acknowledge items
+• Complete by deadline
+
+📊 DECISION TRACKING
+
+Decisions tracked for accountability:
+• Decision text
+• Made by
+• Date
+• Status (ACTIVE, COMPLETED, CANCELLED, REVISED)
+
+⚠️ TOPIC RULES
+
+✓ DO: Post meeting notes, use format, include details, assign items
+✗ DON'T: Post non-meeting messages, skip items, modify format
+
+🚫 WHAT DOESN'T BELONG HERE
+
+❌ Task assignment → Task Allocation
+❌ Issue reporting → Core Operations
+❌ QA submissions → QA Review
+❌ Casual chat → Team Lounge
+
+❓ NEED HELP?
+
+View notes? → Use /meetings command
+Check action items? → Use /myactions command
+Post notes? → Use /postmeeting command
+Track status? → Use /actionstatus command

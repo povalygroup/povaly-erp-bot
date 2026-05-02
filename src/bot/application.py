@@ -102,6 +102,18 @@ async def setup_bot_application(config: Config) -> Application:
     from src.services.report_service import ReportService
     report_service = ReportService(bot_context, config, task_service, issue_service, qa_service, attendance_service)
     
+    # Create deadline reminder service
+    from src.services.deadline_reminder_service import DeadlineReminderService
+    deadline_reminder_service = DeadlineReminderService(bot_context, config, task_service)
+    
+    # Create task routing service
+    from src.services.task_routing_service import TaskRoutingService
+    task_routing_service = TaskRoutingService(task_service, user_repo, db_adapter, config)
+    
+    # Create leave request service
+    from src.services.leave_request_service import LeaveRequestService
+    leave_request_service = LeaveRequestService(attendance_repo, user_repo, task_service, config)
+    
     # DISABLED: Auto-recovery on startup
     # This was deleting tasks from previous runs because the Bot API can't read old messages
     # await topic_scanner.sync_database_with_topic_reality(application)
@@ -132,8 +144,12 @@ async def setup_bot_application(config: Config) -> Application:
     application.bot_data["topic_scanner"] = topic_scanner
     application.bot_data["daily_summary_service"] = daily_summary_service
     application.bot_data["report_service"] = report_service
+    application.bot_data["deadline_reminder_service"] = deadline_reminder_service
+    application.bot_data["task_routing_service"] = task_routing_service
+    application.bot_data["leave_request_service"] = leave_request_service
     application.bot_data["db_adapter"] = db_adapter
     application.bot_data["user_repository"] = user_repo  # Add user repository for username lookups
+    application.bot_data["attendance_repository"] = attendance_repo  # Add attendance repository for leave requests
     
     # Store application reference in db_sync_service for topic scanner sync
     db_sync_service.application = application

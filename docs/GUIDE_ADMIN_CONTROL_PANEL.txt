@@ -1,0 +1,108 @@
+🛡️ ADMIN CONTROL PANEL GUIDE — SYSTEM MANAGEMENT & ALERTS
+
+🎯 PURPOSE: Administrative hub for system alerts, escalations, and management tasks.
+
+🔐 ACCESS CONTROL
+👑 Authorized: Admins, Managers, Owners
+👤 All Employees: Can view alerts
+🚫 Employees CANNOT post
+
+🤖 AUTOMATIC ALERTS
+
+System posts alerts for:
+1. ESCALATED ISSUES (not resolved in 2+ hours)
+2. PENDING QA SUBMISSIONS (not reviewed in 4+ hours)
+3. OVERDUE TASKS (past deadline)
+4. LEAVE REQUESTS (pending approval)
+5. UNATTENDED ISSUES (no one assigned)
+6. TASK DEPENDENCY BLOCKS (blocker in progress)
+7. VIOLATION ALERTS (policy violations)
+8. SECURITY ALERTS (suspicious activity)
+
+⚡ COMMANDS
+
+/alerts - View all pending alerts
+/alerts TYPE - View specific type (escalated, overdue, qa, leave, violations)
+/alert #TICKET - View full alert details
+/dismissalert #TICKET - Mark as handled
+/alertstats - View alert statistics
+/adminactions - View pending admin actions
+
+👑 FOR ADMINS/MANAGERS
+
+WORKFLOW:
+1. Check /alerts daily
+2. Prioritize by severity
+3. Review escalations
+4. Approve/reject requests (❤️/👎)
+5. Handle violations
+6. Resolve blockers
+7. Dismiss handled alerts
+8. Generate reports
+
+⚠️ Important:
+• Check alerts regularly
+• Act on escalations quickly
+• Approve/reject promptly
+• Enforce policies
+• Keep audit trail clean
+
+📝 MANUAL ADMIN POSTS
+
+[ALERT_TYPE] Custom alert type
+[SEVERITY] LOW / MEDIUM / HIGH / CRITICAL
+[DESCRIPTION] What's happening
+[ACTION_REQUIRED] Yes/No
+[DEADLINE] YYYY-MM-DD (if needed)
+[ASSIGNED_TO] @username (optional)
+
+🔄 ALERT REACTIONS
+
+👍 = ACKNOWLEDGED (I see this)
+❤️ = RESOLVED (I handled this)
+👎 = INVALID (Not an issue)
+
+📊 ALERT TYPES & ACTIONS
+
+ESCALATED ISSUES:
+→ Contact handler, provide resources
+
+PENDING QA:
+→ Remind reviewer, check blockers
+
+OVERDUE TASKS:
+→ Contact assignee, identify blockers
+
+LEAVE REQUESTS:
+→ Review, approve/reject, arrange coverage
+
+UNATTENDED ISSUES:
+→ Assign to someone, set deadline
+
+TASK DEPENDENCIES:
+→ Unblock blocker, notify dependent
+
+VIOLATIONS:
+→ Contact user, explain policy
+
+SECURITY ALERTS:
+→ Investigate immediately
+
+⚠️ TOPIC RULES
+
+✓ DO: Post admin alerts, use format, act quickly
+✗ DON'T: Post non-admin messages, ignore alerts, delete alerts
+
+🚫 WHAT DOESN'T BELONG HERE
+
+❌ Task assignment → Task Allocation
+❌ Issue reporting → Core Operations
+❌ QA submissions → QA Review
+❌ Casual chat → Team Lounge
+
+❓ NEED HELP?
+
+Check alerts? → Use /alerts command
+View specific alert? → Use /alert #TICKET
+Dismiss handled? → Use /dismissalert #TICKET
+Statistics? → Use /alertstats command

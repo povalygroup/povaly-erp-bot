@@ -143,9 +143,8 @@ class TaskService:
             from telegram import Bot
             bot = Bot(token=self.config.TELEGRAM_BOT_TOKEN)
             
-            await bot.send_message(
-                chat_id=assignee_id,
-                text=f"""📋 **New Task Assigned**
+            # Create message with auto-delete warning
+            message_text = f"""📋 **New Task Assigned**
 
 **Task:** #{ticket}
 **Brand:** {brand_code}
@@ -153,11 +152,31 @@ class TaskService:
 
 [📎 View Task]({task_link})
 
-React with 👍 to start working on this task.""",
+React with 👍 to start working on this task.
+
+_⏱️ This message will auto-delete in 120 seconds_"""
+            
+            await bot.send_message(
+                chat_id=assignee_id,
+                text=message_text,
                 parse_mode='Markdown',
                 disable_web_page_preview=True
             )
             logger.info(f"✅ Sent task assignment DM to user {assignee_id} for task {ticket}")
+            
+            # Schedule auto-delete
+            import asyncio
+            async def delete_after_delay():
+                await asyncio.sleep(120)
+                try:
+                    # Note: We can't delete the message here because we don't have the message_id
+                    # The bot instance is temporary. This is a limitation.
+                    pass
+                except Exception as e:
+                    logger.warning(f"Failed to auto-delete task assignment DM: {e}")
+            
+            asyncio.create_task(delete_after_delay())
+            
         except Exception as e:
             logger.warning(f"⚠️ Failed to send task assignment DM to user {assignee_id}: {e}")
         

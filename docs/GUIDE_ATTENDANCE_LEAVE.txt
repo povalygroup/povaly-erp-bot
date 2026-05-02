@@ -1,0 +1,75 @@
+📋 ATTENDANCE & LEAVE GUIDE
+
+🎯 PURPOSE: Track work hours, request time off, manage task handover during leave.
+
+⏰ ATTENDANCE (AUTOMATIC)
+System tracks: check-in, check-out, breaks, work hours, status
+
+/attendance - View current month
+/myattendance YYYY-MM - View specific month
+/breakstart - Mark break start
+/breakend - Mark break end
+/mybreaks - View today's breaks
+
+☕ BREAK TRACKING
+/breakstart → Stops work hour counting
+/breakend → Resumes work hour counting
+
+🏖️ LEAVE REQUESTS
+
+REQUEST LEAVE:
+/requestleave YYYY-MM-DD YYYY-MM-DD Reason [@replacement]
+
+Example:
+/requestleave 2026-05-01 2026-05-05 Family vacation @john.doe
+
+APPROVAL WORKFLOW:
+Admins/Managers react:
+❤️ = APPROVED (tasks reassigned to replacement)
+👎 = REJECTED (tasks stay with employee)
+
+/myleave - View your requests
+/pendingleave - View pending (admin only)
+
+🚫 ASSIGNMENT PREVENTION
+When ON_LEAVE:
+• /assignto blocked with warning
+• /bulkassign skips on-leave users
+• /workload shows leave status
+
+📌 TASK HANDOVER
+On approval:
+→ All active tasks reassigned to replacement
+→ Replacement gets DM notification
+→ Original assignee gets approval DM
+
+⚡ COMMANDS
+/attendance, /myattendance, /breakstart, /breakend, /mybreaks
+/requestleave, /myleave, /pendingleave
+/workload, /teamattendance
+
+👷 FOR EMPLOYEES
+1. Work normally (auto-tracked)
+2. Use /breakstart and /breakend
+3. Request leave with /requestleave
+4. Specify replacement for task coverage
+5. Check DMs for approval
+
+👑 FOR ADMINS
+1. Monitor /teamattendance
+2. Review /pendingleave requests
+3. React ❤️ to approve, 👎 to reject
+4. Verify task reassignment
+5. Handle unassigned tasks
+
+⚙️ CONFIG OPTIONS
+LEAVE_REQUEST_MIN_NOTICE_DAYS (default: 0)
+LEAVE_REQUEST_MAX_DURATION_DAYS (default: 30)
+LEAVE_REQUEST_ALLOW_OVERLAPPING (default: False)
+LEAVE_REQUEST_REQUIRE_REPLACEMENT (default: False)
+LEAVE_REQUEST_AUTO_REASSIGN_TASKS (default: True)
+
+❓ NEED HELP?
+Leave rejected? → Check DM for reason
+Task not reassigned? → Specify replacement
+Attendance issue? → Contact admin

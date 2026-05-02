@@ -1,0 +1,102 @@
+🎯 STRATEGIC LOUNGE GUIDE — PLANNING & STRATEGY DISCUSSION
+
+🎯 PURPOSE: Strategic planning, long-term initiatives, and business development discussions.
+
+🔐 ACCESS CONTROL
+👑 Authorized Posters: Leadership, Managers, Strategic team
+👤 All Employees: Can view and comment
+🚫 Casual chat not allowed
+
+📝 DISCUSSION FORMAT
+
+[TOPIC] Initiative or strategy title
+[OBJECTIVE] What we want to achieve
+[TIMELINE] When we want to achieve it
+[RESOURCES] What we need
+[DISCUSSION] Your thoughts and ideas
+[NEXT_STEPS] What happens next
+
+Example:
+[TOPIC] Q3 Product Roadmap
+[OBJECTIVE] Launch 3 new features
+[TIMELINE] July - September 2026
+[RESOURCES] 2 developers, 1 designer
+[DISCUSSION] We should prioritize mobile optimization...
+[NEXT_STEPS] Team meeting on May 5th
+
+💬 DISCUSSION SYSTEM
+
+Threaded discussions:
+• Main message = strategy topic
+• Replies = discussion and ideas
+• Reactions = support/agreement
+
+Reactions:
+👍 = I support this
+❤️ = I love this idea
+👎 = I have concerns
+🔥 = This is urgent/important
+
+⚡ COMMANDS
+
+/strategy - View all initiatives
+/strategy TOPIC - View specific strategy
+/mystrategy - View your strategies
+/strategydiscussion - Start new discussion
+/strategystatus - View status of all initiatives
+
+👑 FOR LEADERSHIP/MANAGERS
+
+WORKFLOW:
+1. Propose strategic initiative
+2. Include objective and timeline
+3. Invite discussion
+4. Gather input
+5. Consider perspectives
+6. Make decision
+7. Communicate clearly
+8. Execute and track
+
+⚠️ Important:
+• Be clear about objectives
+• Listen to team input
+• Make timely decisions
+• Communicate clearly
+• Track progress
+
+👷 FOR EMPLOYEES
+
+WORKFLOW:
+1. Read strategies regularly
+2. Understand company direction
+3. Learn about initiatives
+4. Reply with thoughts
+5. Share perspectives
+6. Suggest improvements
+7. Support decisions
+8. Execute with commitment
+
+⚠️ Important:
+• Read discussions
+• Contribute thoughtfully
+• Support team decisions
+• Execute with commitment
+• Ask if unclear
+
+⚠️ TOPIC RULES
+
+✓ DO: Post initiatives, discuss thoughtfully, support with data, contribute ideas
+✗ DON'T: Post non-strategic messages, be dismissive, ignore decisions, casual chat
+
+🚫 WHAT DOESN'T BELONG HERE
+
+❌ Task assignment → Task Allocation
+❌ Issue reporting → Core Operations
+❌ QA submissions → QA Review
+❌ Casual chat → Team Lounge
+
+❓ NEED HELP?
+
+Unclear about strategy? → Ask in Core Operations
+Want to propose idea? → Use /strategydiscussion command
+Check progress? → Use /strategystatus command

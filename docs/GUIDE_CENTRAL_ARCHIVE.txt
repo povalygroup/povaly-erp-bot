@@ -1,0 +1,106 @@
+📦 CENTRAL ARCHIVE GUIDE — COMPLETED WORK REPOSITORY
+
+🎯 PURPOSE: Repository for all completed and approved tasks. Auto-archived after QA approval.
+
+📝 ARCHIVE FORMAT (AUTOMATIC)
+
+[TICKET] POV260501
+[BRAND] #POV
+[TASK] Homepage banner redesign
+[ASSIGNEE] @john.doe
+[COMPLETED_BY] @qa.lead
+[COMPLETION_DATE] 2026-04-28
+[SUBMISSION_LINK] https://drive.google.com/file/d/1ABC123
+[NOTES] Completed on time, excellent quality
+
+🤖 AUTOMATIC ARCHIVING
+
+When task approved in QA Review:
+1. QA reviewer reacts ❤️
+2. Bot automatically:
+   → Marks task as COMPLETED
+   → Creates archive message
+   → Posts to Central Archive
+   → Sends DM to assignee
+   → Updates database
+
+🔍 SEARCH & RETRIEVE
+
+/archive - View recent completed tasks
+/archive #BRAND - View by brand
+/archive @USER - View by assignee
+/archive YYYY-MM - View by month
+/archivetask #TICKET - View full details
+/archivestat - View statistics
+/archivestat #BRAND - Brand statistics
+/archivestat @USER - User statistics
+/myarchive - View your completed tasks
+/myarchive YYYY-MM - Your tasks by month
+
+📊 ARCHIVE STATISTICS
+
+/archivestat shows:
+• Total completed tasks
+• This month/week
+• Average completion time
+
+/archivestat #BRAND shows:
+• Tasks per brand
+• Completion rates
+
+/archivestat @USER shows:
+• User completion count
+• Performance metrics
+
+👷 FOR EMPLOYEES
+
+WORKFLOW:
+1. Complete task in Task Allocation
+2. React 👍 to mark started
+3. Submit for QA in QA Review
+4. Wait for approval
+5. Once approved, task auto-archived
+6. Get DM: "Task POV260501 archived!"
+7. View with /myarchive
+
+⚠️ Important:
+• Submit complete work only
+• Follow all guidelines
+• Check DMs for approval
+• View archive regularly
+• Use for portfolio
+
+👑 FOR ADMINS/MANAGERS
+
+WORKFLOW:
+1. Monitor /archivestat for metrics
+2. Track team productivity
+3. Review completed work
+4. Verify QA approvals
+5. Analyze trends
+6. Generate reports
+
+⚠️ Important:
+• Monitor completion rates
+• Celebrate achievements
+• Identify improvements
+• Use data for planning
+• Keep archive organized
+
+⚠️ TOPIC RULES
+
+✓ DO: View completed work, search archive, use for reference
+✗ DON'T: Post non-archived tasks, modify messages, delete work
+
+🚫 WHAT DOESN'T BELONG HERE
+
+❌ Active tasks → Task Allocation
+❌ Issues → Core Operations
+❌ QA submissions → QA Review
+❌ Casual chat → Team Lounge
+
+❓ NEED HELP?
+
+Can't find task? → Use /archive with filters
+Need details? → Use /archivetask #TICKET
+Want statistics? → Use /archivestat command

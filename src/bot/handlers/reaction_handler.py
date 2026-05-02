@@ -25,16 +25,18 @@ async def send_invalid_reaction_warning(context, user_id, emoji, entity_type, en
         message_link: Optional link to the message
     """
     try:
+        from src.utils.message_utils import send_auto_delete_dm
+        
         message_text = f"❌ **Invalid Reaction**\n\nYour {emoji} reaction on {entity_type} **{entity_id}** was not processed.\n\n**Reason:** {reason}"
         
         if message_link:
             message_text += f"\n\n[📎 View Message]({message_link})\n\n**Action Required:** Please remove your {emoji} reaction from the message by clicking it again."
         
-        await context.bot.send_message(
-            chat_id=user_id,
+        await send_auto_delete_dm(
+            context=context,
+            user_id=user_id,
             text=message_text,
-            parse_mode='Markdown',
-            disable_web_page_preview=True
+            delete_after_seconds=30
         )
         logger.info(f"✉️ Sent invalid reaction warning to user {user_id} for {emoji} on {entity_type} {entity_id}")
     except Exception as e:
@@ -241,7 +243,31 @@ async def handle_reaction_update(update: Update, context: ContextTypes.DEFAULT_T
             else:
                 logger.info(f"❌ No admin alert found for message {message_id}")
         
-        logger.warning(f"⚠️ No task, issue, or QA submission found for message {message_id}")
+        # Try to find leave request (Attendance & Leave topic)
+        attendance_repo = context.bot_data.get('attendance_repository')
+        if attendance_repo:
+            # Search for leave request by message_id
+            try:
+                all_pending = await attendance_repo.get_pending_leave_requests()
+                leave_request = None
+                for req in all_pending:
+                    if req.message_id == message_id:
+                        leave_request = req
+                        break
+                
+                if leave_request:
+                    logger.info(f"✅ Found leave request for message {message_id}")
+                    await process_leave_reactions(
+                        leave_request, user_id, added_reactions, removed_reactions,
+                        attendance_repo, context, config
+                    )
+                    return
+                else:
+                    logger.debug(f"❌ No leave request found for message {message_id}")
+            except Exception as e:
+                logger.warning(f"Error checking for leave request: {e}")
+        
+        logger.warning(f"⚠️ No task, issue, QA submission, admin alert, or leave request found for message {message_id}")
         
     except Exception as e:
         logger.error(f"Error handling reaction update: {e}", exc_info=True)
@@ -347,8 +373,10 @@ async def process_task_reactions(task, user_id, added_reactions, removed_reactio
                                     )
                                     
                                     # Send DM confirmation
-                                    await context.bot.send_message(
-                                        chat_id=user_id,
+                                    from src.utils.message_utils import send_auto_delete_dm
+                                    await send_auto_delete_dm(
+                                        context=context,
+                                        user_id=user_id,
                                         text=f"""✅ **Check-in Recorded**
 
 **Time:** {time_str}
@@ -356,7 +384,7 @@ async def process_task_reactions(task, user_id, added_reactions, removed_reactio
 **Date:** {today.strftime('%Y-%m-%d')}
 
 Have a productive day!""",
-                                        parse_mode='Markdown'
+                                        delete_after_seconds=60
                                     )
                                     
                                     logger.info(f"✅ Auto check-in recorded for user {user_id} (@{username}) at {time_str} (late={is_late})")
@@ -390,16 +418,27 @@ Have a productive day!""",
                 if task.state == TaskState.QA_SUBMITTED:
                     # QA reviewer approving the task
                     if user_id in config.QA_REVIEWERS:
-                        success = await task_service.state_engine.process_heart_reaction(
-                            task.ticket, user_id, datetime.now()
-                        )
-                        if success:
-                            logger.info(f"✅ Task {task.ticket} transitioned to APPROVED by {user_id}")
-                            await task_service.task_repo.add_reaction(
-                                task.ticket, emoji, user_id, task.message_id, task.topic_id
+                        # Check for blocking tasks
+                        blocking_tasks = await task_service.task_repo.get_blocking_tasks(task.ticket)
+                        if blocking_tasks:
+                            logger.warning(f"Task {task.ticket} has blocking tasks: {blocking_tasks}")
+                            blocking_list = ", ".join([f"#{t}" for t in blocking_tasks])
+                            await send_invalid_reaction_warning(
+                                context, user_id, "❤️", "task", f"#{task.ticket}",
+                                f"❌ **Task is Blocked**\n\nThis task cannot be approved because it is blocked by:\n{blocking_list}\n\nPlease resolve the blocking tasks first, then try again.",
+                                task_link
                             )
                         else:
-                            logger.warning(f"Failed to transition {task.ticket} to APPROVED")
+                            success = await task_service.state_engine.process_heart_reaction(
+                                task.ticket, user_id, datetime.now()
+                            )
+                            if success:
+                                logger.info(f"✅ Task {task.ticket} transitioned to APPROVED by {user_id}")
+                                await task_service.task_repo.add_reaction(
+                                    task.ticket, emoji, user_id, task.message_id, task.topic_id
+                                )
+                            else:
+                                logger.warning(f"Failed to transition {task.ticket} to APPROVED")
                     else:
                         logger.warning(f"User {user_id} is not a QA reviewer")
                         await send_invalid_reaction_warning(
@@ -419,10 +458,12 @@ Have a productive day!""",
                         
                         # Send confirmation to assignee
                         try:
-                            await context.bot.send_message(
-                                chat_id=user_id,
+                            from src.utils.message_utils import send_auto_delete_dm
+                            await send_auto_delete_dm(
+                                context=context,
+                                user_id=user_id,
                                 text=f"✅ **Completion Confirmed**\n\nYou've marked task **#{task.ticket}** as complete.\n\nThe task will be automatically archived within 24 hours.\n\nThank you for your work!",
-                                parse_mode='Markdown'
+                                delete_after_seconds=60
                             )
                         except Exception as e:
                             logger.warning(f"Failed to send completion confirmation: {e}")
@@ -561,8 +602,10 @@ async def process_issue_reactions(issue, user_id, added_reactions, removed_react
                     # Send notification to issue creator if different user
                     if issue.creator_id != user_id:
                         try:
-                            await context.bot.send_message(
-                                chat_id=issue.creator_id,
+                            from src.utils.message_utils import send_auto_delete_dm
+                            await send_auto_delete_dm(
+                                context=context,
+                                user_id=issue.creator_id,
                                 text=f"""👍 **Issue Claimed**
 
 Your issue **{issue.issue_ticket}** has been claimed by {claimer_username}.
@@ -571,8 +614,7 @@ Your issue **{issue.issue_ticket}** has been claimed by {claimer_username}.
 **Issue:** {issue.title}
 
 [📎 View Issue]({issue_link})""",
-                                parse_mode='Markdown',
-                                disable_web_page_preview=True
+                                delete_after_seconds=60
                             )
                             logger.info(f"Sent claim notification to creator {issue.creator_id}")
                         except Exception as e:
@@ -585,8 +627,10 @@ Your issue **{issue.issue_ticket}** has been claimed by {claimer_username}.
                         try:
                             task = await task_service.get_task(issue.ticket)
                             if task and task.assignee_id != user_id and task.assignee_id != issue.creator_id:
-                                await context.bot.send_message(
-                                    chat_id=task.assignee_id,
+                                from src.utils.message_utils import send_auto_delete_dm
+                                await send_auto_delete_dm(
+                                    context=context,
+                                    user_id=task.assignee_id,
                                     text=f"""👍 **Issue Claimed on Your Task**
 
 An issue on your task **#{issue.ticket}** has been claimed by {claimer_username}.
@@ -594,8 +638,7 @@ An issue on your task **#{issue.ticket}** has been claimed by {claimer_username}
 **Issue:** {issue.issue_ticket} - {issue.title}
 
 [📎 View Issue]({issue_link})""",
-                                    parse_mode='Markdown',
-                                    disable_web_page_preview=True
+                                    delete_after_seconds=60
                                 )
                                 logger.info(f"Sent claim notification to assignee {task.assignee_id}")
                         except Exception as e:
@@ -609,10 +652,12 @@ An issue on your task **#{issue.ticket}** has been claimed by {claimer_username}
                     
                     # Send DM to issue creator
                     try:
-                        await context.bot.send_message(
-                            chat_id=issue.creator_id,
+                        from src.utils.message_utils import send_auto_delete_dm
+                        await send_auto_delete_dm(
+                            context=context,
+                            user_id=issue.creator_id,
                             text=f"✅ **Issue Resolved**\n\nIssue **{issue.issue_ticket}** has been resolved.\n\n**Task:** #{issue.ticket}\n**Issue:** {issue.title}",
-                            parse_mode='Markdown'
+                            delete_after_seconds=60
                         )
                         logger.info(f"Sent resolution notification to user {issue.creator_id}")
                     except Exception as e:
@@ -626,10 +671,12 @@ An issue on your task **#{issue.ticket}** has been claimed by {claimer_username}
                     
                     # Send notification to issue creator
                     try:
-                        await context.bot.send_message(
-                            chat_id=issue.creator_id,
+                        from src.utils.message_utils import send_auto_delete_dm
+                        await send_auto_delete_dm(
+                            context=context,
+                            user_id=issue.creator_id,
                             text=f"❌ **Issue Rejected**\n\nYour issue **{issue.issue_ticket}** has been marked as invalid.\n\n**Task:** #{issue.ticket}\n**Issue:** {issue.title}",
-                            parse_mode='Markdown'
+                            delete_after_seconds=60
                         )
                         logger.info(f"Sent rejection notification to user {issue.creator_id}")
                     except Exception as e:
@@ -692,10 +739,12 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
         if review_reactions:
             logger.warning(f"⚠️ Submitter {user_id} tried to react to their own QA {qa_submission.ticket}")
             try:
-                await context.bot.send_message(
-                    chat_id=user_id,
+                from src.utils.message_utils import send_auto_delete_dm
+                await send_auto_delete_dm(
+                    context=context,
+                    user_id=user_id,
                     text=f"⚠️ **Cannot React to Your Own QA**\n\nYou cannot react to your own QA submission for task **#{qa_submission.ticket}**.\n\nOnly reviewers can claim, approve, or reject QA submissions.\n\nPlease wait for a reviewer to process your submission.",
-                    parse_mode='Markdown'
+                    delete_after_seconds=30
                 )
                 logger.info(f"Sent self-reaction warning to submitter {user_id}")
             except Exception as e:
@@ -1050,3 +1099,154 @@ def setup_reaction_handlers(application: Application, config: Config):
     application.add_handler(MessageReactionHandler(handle_reaction_update))
     
     logger.info("Reaction handlers registered")
+
+
+async def process_leave_reactions(leave_request, user_id, added_reactions, removed_reactions,
+                                  attendance_repo, context, config):
+    """
+    Process reactions on leave request messages.
+    
+    Reactions:
+    - 👍: APPROVE leave request (admin/manager/owner only)
+    - 👎: REJECT leave request (admin/manager/owner only)
+    """
+    
+    # Permission check - only admins/managers/owners can approve/reject
+    is_privileged = (
+        user_id in config.ADMINISTRATORS or
+        user_id in config.MANAGERS or
+        user_id in config.OWNERS
+    )
+    
+    if not is_privileged:
+        logger.warning(f"User {user_id} tried to approve/reject leave request without permission")
+        await send_invalid_reaction_warning(
+            context, user_id, "reaction", "leave request", f"#{leave_request.id}",
+            "Only Administrators, Managers, and Owners can approve or reject leave requests."
+        )
+        return
+    
+    # Process added reactions
+    for emoji in added_reactions:
+        try:
+            if emoji == "👍":
+                # Approve leave request
+                leave_service = context.bot_data.get('leave_request_service')
+                if leave_service:
+                    success, message = await leave_service.approve_leave_request(
+                        leave_request.id,
+                        user_id
+                    )
+                    
+                    if success:
+                        logger.info(f"✅ Approved leave request {leave_request.id}")
+                        
+                        # Send DM to employee
+                        from src.utils.message_utils import send_auto_delete_dm
+                        employee = await context.bot_data.get('user_repository').get_user(leave_request.user_id)
+                        
+                        duration = (leave_request.end_date - leave_request.start_date).days + 1
+                        dm_text = f"""✅ **Leave Approved**
+
+**Dates:** {leave_request.start_date} to {leave_request.end_date}
+**Duration:** {duration} days
+**Reason:** {leave_request.reason}
+
+Your leave request has been approved. You are now marked as on leave."""
+                        
+                        if leave_request.replacement_user_id:
+                            replacement = await context.bot_data.get('user_repository').get_user(leave_request.replacement_user_id)
+                            dm_text += f"\n\n**Replacement:** @{replacement.username if replacement else 'Unknown'} will handle your tasks."
+                        
+                        try:
+                            await send_auto_delete_dm(
+                                context=context,
+                                user_id=leave_request.user_id,
+                                text=dm_text,
+                                delete_after_seconds=120
+                            )
+                        except Exception as e:
+                            logger.warning(f"Failed to send approval DM to user {leave_request.user_id}: {e}")
+                        
+                        # Update message in topic
+                        try:
+                            await context.bot.edit_message_text(
+                                chat_id=config.TELEGRAM_GROUP_ID,
+                                message_id=leave_request.message_id,
+                                text=f"""📋 **Leave Request**
+
+**Employee:** @{employee.username if employee else 'Unknown'}
+**User ID:** {leave_request.user_id}
+**Dates:** {leave_request.start_date} to {leave_request.end_date}
+**Duration:** {duration} days
+**Reason:** {leave_request.reason}
+**Status:** ✅ APPROVED
+
+Approved by: @{(await context.bot_data.get('user_repository').get_user(user_id)).username if user_id else 'Unknown'}""",
+                                parse_mode='Markdown'
+                            )
+                        except Exception as e:
+                            logger.warning(f"Failed to update leave request message: {e}")
+                    else:
+                        logger.warning(f"Failed to approve leave request: {message}")
+            
+            elif emoji == "👎":
+                # Reject leave request
+                leave_service = context.bot_data.get('leave_request_service')
+                if leave_service:
+                    success, message = await leave_service.reject_leave_request(
+                        leave_request.id,
+                        user_id
+                    )
+                    
+                    if success:
+                        logger.info(f"✅ Rejected leave request {leave_request.id}")
+                        
+                        # Send DM to employee
+                        from src.utils.message_utils import send_auto_delete_dm
+                        employee = await context.bot_data.get('user_repository').get_user(leave_request.user_id)
+                        
+                        dm_text = f"""❌ **Leave Rejected**
+
+**Dates:** {leave_request.start_date} to {leave_request.end_date}
+**Reason:** {leave_request.reason}
+
+Your leave request has been rejected. Please contact your manager for more information."""
+                        
+                        try:
+                            await send_auto_delete_dm(
+                                context=context,
+                                user_id=leave_request.user_id,
+                                text=dm_text,
+                                delete_after_seconds=120
+                            )
+                        except Exception as e:
+                            logger.warning(f"Failed to send rejection DM to user {leave_request.user_id}: {e}")
+                        
+                        # Update message in topic
+                        try:
+                            duration = (leave_request.end_date - leave_request.start_date).days + 1
+                            await context.bot.edit_message_text(
+                                chat_id=config.TELEGRAM_GROUP_ID,
+                                message_id=leave_request.message_id,
+                                text=f"""📋 **Leave Request**
+
+**Employee:** @{employee.username if employee else 'Unknown'}
+**User ID:** {leave_request.user_id}
+**Dates:** {leave_request.start_date} to {leave_request.end_date}
+**Duration:** {duration} days
+**Reason:** {leave_request.reason}
+**Status:** ❌ REJECTED
+
+Rejected by: @{(await context.bot_data.get('user_repository').get_user(user_id)).username if user_id else 'Unknown'}""",
+                                parse_mode='Markdown'
+                            )
+                        except Exception as e:
+                            logger.warning(f"Failed to update leave request message: {e}")
+                    else:
+                        logger.warning(f"Failed to reject leave request: {message}")
+        
+        except Exception as e:
+            logger.error(f"Error processing {emoji} reaction on leave request: {e}", exc_info=True)
+
+

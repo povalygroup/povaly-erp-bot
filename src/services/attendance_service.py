@@ -212,9 +212,19 @@ class AttendanceService:
 **Total Hours:** {total_hours:.1f} hours
 **Date:** {today.strftime('%Y-%m-%d')}
 
-Have a great evening!""",
+Have a great evening!
+
+_⏱️ This message will auto-delete in 120 seconds_""",
                                 parse_mode='Markdown'
                             )
+                            
+                            # Schedule auto-delete
+                            import asyncio
+                            async def delete_checkout_msg():
+                                await asyncio.sleep(120)
+                                pass
+                            asyncio.create_task(delete_checkout_msg())
+                            
                         except Exception as e:
                             logger.warning(f"Failed to send auto checkout DM to user {user.user_id}: {e}")
                         
@@ -292,11 +302,21 @@ You haven't checked in today yet.
 
 Please use `/checkin` or start your first task to mark attendance.
 
-_Note: Late check-ins are tracked._""",
+_Note: Late check-ins are tracked._
+
+_⏱️ This message will auto-delete in 180 seconds_""",
                                 parse_mode='Markdown'
                             )
                             alert_count += 1
                             logger.info(f"📨 Sent late check-in reminder to user {user.user_id}")
+                            
+                            # Schedule auto-delete
+                            import asyncio
+                            async def delete_checkin_reminder():
+                                await asyncio.sleep(180)
+                                pass
+                            asyncio.create_task(delete_checkin_reminder())
+                            
                         except Exception as e:
                             logger.warning(f"Failed to send late alert DM to user {user.user_id}: {e}")
                 

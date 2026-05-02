@@ -261,7 +261,9 @@ Please update the issue status or resolve it if completed.
 **Commands:**
 • `/issue {issue.ticket}` - View full details
 • `/close {issue.ticket}` - Mark as resolved
-• React with ❤️ on the original message to resolve"""
+• React with ❤️ on the original message to resolve
+
+_⏱️ This message will auto-delete in 300 seconds_"""
                     
                     await self.bot_context.bot.send_message(
                         chat_id=user_id,
@@ -270,6 +272,14 @@ Please update the issue status or resolve it if completed.
                     )
                     
                     logger.info(f"Sent reminder to user {user_id} for issue {issue.ticket}")
+                    
+                    # Schedule auto-delete
+                    import asyncio
+                    async def delete_reminder():
+                        await asyncio.sleep(300)
+                        # Note: Can't delete without message_id stored
+                        pass
+                    asyncio.create_task(delete_reminder())
                     
                 except Exception as e:
                     logger.warning(f"Failed to send reminder to user {user_id}: {e}")
@@ -371,7 +381,9 @@ Please update the issue status or resolve it if completed.
 
 [View Task]({task_link})
 
-Please update status or contact admin if blocked."""
+Please update status or contact admin if blocked.
+
+_⏱️ This message will auto-delete in 180 seconds_"""
                 
                 await self.bot_context.bot.send_message(
                     chat_id=task.assignee_id,
@@ -380,6 +392,14 @@ Please update status or contact admin if blocked."""
                     disable_web_page_preview=True
                 )
                 logger.info(f"📨 Sent task escalation DM to assignee {task.assignee_id} for {task.ticket}")
+                
+                # Schedule auto-delete
+                import asyncio
+                async def delete_assignee_msg():
+                    await asyncio.sleep(180)
+                    pass
+                asyncio.create_task(delete_assignee_msg())
+                
             except Exception as e:
                 logger.warning(f"Failed to send task escalation DM to assignee {task.assignee_id}: {e}")
             

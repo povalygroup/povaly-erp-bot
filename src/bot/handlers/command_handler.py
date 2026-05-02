@@ -1468,11 +1468,12 @@ async def cmd_reopen(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             # Send DM to creator with link and attachment instructions
             try:
-                await context.bot.send_message(
-                    chat_id=user_id,
+                from src.utils.message_utils import send_auto_delete_dm
+                await send_auto_delete_dm(
+                    context=context,
+                    user_id=user_id,
                     text=f"🔄 **Issue Reopened Successfully**\n\nYou have reopened issue **{issue.issue_ticket}**.\n\n**Issue:** {issue.title}\n**Reason:** {reason}\n\n💡 **Adding Attachments:**\nIf you need to provide screenshots, files, or additional context, simply **reply to the original issue message** in the group. The resolver will be notified to check the thread for any new attachments.\n\n[📎 Go to Issue Message]({message_link})",
-                    parse_mode='Markdown',
-                    disable_web_page_preview=True
+                    delete_after_seconds=120
                 )
                 logger.info(f"Sent reopen confirmation DM to creator {user_id}")
             except Exception as e:
@@ -1880,11 +1881,12 @@ _Reviewers: React 👍 to claim, ❤️ to approve, or 👎 to reject._"""
         
         # Send DM to submitter
         try:
-            await context.bot.send_message(
-                chat_id=user_id,
+            from src.utils.message_utils import send_auto_delete_dm
+            await send_auto_delete_dm(
+                context=context,
+                user_id=user_id,
                 text=f"✅ **QA Submitted**\n\nYour work on task **#{ticket}** has been submitted for QA review.\n\n**Asset:** {asset}\n\n[📎 View QA Submission]({qa_link})\n\nYou will be notified when the review is complete.",
-                parse_mode='Markdown',
-                disable_web_page_preview=True
+                delete_after_seconds=90
             )
         except Exception as e:
             logger.warning(f"Failed to send QA submission DM: {e}")
@@ -2064,11 +2066,12 @@ _Reviewers: React 👍 to claim, ❤️ to approve, or 👎 to reject._"""
         
         # Send DM to submitter
         try:
-            await context.bot.send_message(
-                chat_id=user_id,
+            from src.utils.message_utils import send_auto_delete_dm
+            await send_auto_delete_dm(
+                context=context,
+                user_id=user_id,
                 text=f"✅ **QA Submitted**\n\nYour work on task **#{ticket}** has been submitted for QA review.\n\n**Asset:** {asset}\n\n[📎 View QA Submission]({qa_link})\n\nYou will be notified when the review is complete.",
-                parse_mode='Markdown',
-                disable_web_page_preview=True
+                delete_after_seconds=90
             )
         except Exception as e:
             logger.warning(f"Failed to send QA submission DM: {e}")
@@ -3359,11 +3362,12 @@ async def cmd_reopenqa(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Send DM to submitter confirming reopen
         try:
-            await context.bot.send_message(
-                chat_id=user_id,
+            from src.utils.message_utils import send_auto_delete_dm
+            await send_auto_delete_dm(
+                context=context,
+                user_id=user_id,
                 text=f"🔄 **QA Reopened Successfully**\n\nYou have reopened QA submission for task **#{ticket}**.\n\n**Asset:** {qa_submission.asset}\n**Update:** {update_message}\n\n[📎 View QA Submission]({qa_link})\n\nThe reviewer will be notified to review your updates.",
-                parse_mode='Markdown',
-                disable_web_page_preview=True
+                delete_after_seconds=120
             )
             logger.info(f"Sent reopen confirmation DM to submitter {user_id}")
         except Exception as e:
@@ -3379,11 +3383,12 @@ async def cmd_reopenqa(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     if reviewer and reviewer.username:
                         reviewer_username = f"@{reviewer.username}"
                 
-                await context.bot.send_message(
-                    chat_id=reviewer_id,
+                from src.utils.message_utils import send_auto_delete_dm
+                await send_auto_delete_dm(
+                    context=context,
+                    user_id=reviewer_id,
                     text=f"🔄 **QA Reopened**\n\nQA submission for task **#{ticket}** has been reopened by the submitter.\n\n**Asset:** {qa_submission.asset}\n**Submitted by:** @{username}\n\n**Update Message:**\n_{update_message}_\n\n⚠️ **Action Required:**\nThe submitter has addressed your feedback. Please review the updated submission.\n\n[📎 View QA Submission]({qa_link})",
-                    parse_mode='Markdown',
-                    disable_web_page_preview=True
+                    delete_after_seconds=120
                 )
                 logger.info(f"Sent reopen notification to reviewer {reviewer_id}")
             except Exception as e:
@@ -3912,7 +3917,7 @@ async def cmd_newissue_priority_only(update: Update, context: ContextTypes.DEFAU
 
 
 async def cmd_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle /commands command - show all available commands with descriptions."""
+    """Handle /commands command - show all available commands with role-based filtering."""
     
     # Delete the command message from group
     try:
@@ -3930,83 +3935,136 @@ async def cmd_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
     is_admin = user_id in config.ADMINISTRATORS if config else False
     is_manager = user_id in config.MANAGERS if config else False
     is_owner = user_id in config.OWNERS if config else False
+    is_qa_reviewer = user_id in config.QA_REVIEWERS if config else False
     is_privileged = is_admin or is_manager or is_owner
     
     # Build comprehensive command list
-    message = "📚 **Available Commands**\n\n"
+    message = "📚 **POVALY ERP BOT - COMMAND REFERENCE**\n\n"
     
     # Add user info at the top
-    message += f"👤 **Requested by:** @{username}\n"
-    message += f"🆔 **ID:** {user_id}\n\n"
+    message += f"👤 **User:** @{username} (ID: {user_id})\n"
     
-    # Auto-delete warning at the top
-    message += "⏱️ **Auto-delete:** This message will be deleted in 120 seconds\n\n"
-    
-    message += "💡 **Tip:** Copy and paste any command to use it\n\n"
-    message += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-    
-    # Task Management Commands (Available to all)
-    message += "**📋 Task Management**\n"
-    message += "`/mytasks` - Show your assigned tasks with status\n"
-    message += "`/newtask` - Create a new task (shows brand selection)\n"
-    message += "`/tasksbystate` - Filter tasks by state (ASSIGNED, STARTED, etc.)\n"
-    message += "`/taskstats` - Show task statistics and summary\n"
-    message += "`/overduetasks` - Show overdue tasks\n\n"
-    
-    # Issue Management Commands (Available to all)
-    message += "**🔧 Issue Management**\n"
-    message += "`/newissue` - Create a new issue\n"
-    message += "  • Reply to a task message: Extract ticket automatically\n"
-    message += "  • Use in Core Operations: Manual issue creation\n"
-    message += "`/myissues` - Show issues you've created\n"
-    message += "`/myclaimedissues` - Show issues you've claimed\n"
-    message += "`/openissues` - Show all unresolved issues\n"
-    message += "`/unresolved` - Show claimed but unresolved issues\n"
-    message += "`/inactive` - Show unclaimed issues\n"
-    message += "`/issue <ticket>` - Show specific issue details\n"
-    message += "`/close <ticket>` - Resolve an issue\n\n"
-    
-    # Information & Help Commands (Available to all)
-    message += "**ℹ️ Information & Help**\n"
-    message += "`/help` - Show general help and bot overview\n"
-    message += "`/taskhelp` - Show task allocation guide\n"
-    message += "`/brand` - Show available brands\n"
-    message += "`/support` - Show support type selection\n"
-    message += "`/commands` - Show this command list\n\n"
-    
-    # Advanced Filtering (Available to all)
-    message += "**🔍 Advanced Filtering**\n"
-    message += "`/filter` - Advanced task filtering options\n\n"
-    
-    # Reaction-based Actions (Available to all)
-    message += "**👍 Reaction-based Actions**\n"
-    message += "React to task messages with:\n"
-    message += "  • 👍 - Start task (ASSIGNED → STARTED)\n"
-    message += "  • ❤️ - Approve QA (QA_SUBMITTED → APPROVED)\n"
-    message += "  • 👎 - Reject QA (QA_SUBMITTED → REJECTED)\n"
-    
-    # Show privileged commands only to admins/managers/owners
-    if is_privileged:
-        message += "  • 🔥 - Add exemption (Admin/Manager/Owner only)\n\n"
-        
-        # Admin Commands
-        message += "**⚙️ Admin Commands**\n"
-        message += "`/edit <message_id> <new_text>` - Edit bot messages\n"
-        message += "`/pin` - Show pinning options\n"
-        message += "`/dailysummary` - Manually trigger daily task summary\n\n"
-        
-        # Database & Sync Commands
-        message += "**🔄 Database & Sync Commands**\n"
-        message += "`/cleantasks` - Clean up orphaned tasks\n"
-        message += "`/syncdb` - Aggressive database cleanup\n"
-        message += "`/resetdb` - Reset your database to match reality\n"
-        message += "`/scantopic` - Scan Task Allocation topic\n"
-        message += "`/syncdebug` - Show sync service status\n"
-        message += "`/debugtasks` - Debug task detection\n\n"
+    # Show user role
+    if is_owner:
+        role_text = "👑 OWNER"
+    elif is_admin:
+        role_text = "🔐 ADMINISTRATOR"
+    elif is_manager:
+        role_text = "📊 MANAGER"
+    elif is_qa_reviewer:
+        role_text = "✅ QA REVIEWER"
     else:
-        message += "\n"
+        role_text = "👤 REGULAR EMPLOYEE"
     
-    message += "_Copy any command and paste in chat to use it_"
+    message += f"🎯 **Role:** {role_text}\n\n"
+    message += "⏱️ _This message will auto-delete in 120 seconds_\n\n"
+    message += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+    
+    # ===== TASK MANAGEMENT COMMANDS (All Users) =====
+    message += "**📋 TASK MANAGEMENT** (All Users)\n"
+    message += "`/newtask` - Create new task\n"
+    message += "`/mytasks` - View your assigned tasks\n"
+    message += "`/tasksbystate` - Filter tasks by state\n"
+    message += "`/taskstats` - Task statistics\n"
+    message += "`/overduetasks` - Show overdue tasks\n"
+    message += "`/filter` - Advanced task filtering\n\n"
+    
+    # ===== ISSUE MANAGEMENT COMMANDS (All Users) =====
+    message += "**🔧 ISSUE MANAGEMENT** (All Users)\n"
+    message += "`/newissue` - Create new issue\n"
+    message += "`/myissues` - Your created issues\n"
+    message += "`/myclaimedissues` - Issues you claimed\n"
+    message += "`/openissues` - All unresolved issues\n"
+    message += "`/unresolved` - Claimed but unresolved\n"
+    message += "`/inactive` - Unclaimed issues\n"
+    message += "`/issue <ticket>` - Issue details\n"
+    message += "`/close <ticket>` - Resolve issue\n"
+    message += "`/reopen <ticket>` - Reopen issue\n\n"
+    
+    # ===== QA COMMANDS (All Users + QA Reviewers) =====
+    message += "**✅ QA & REVIEW**\n"
+    message += "`/newqa` - Submit work for QA\n"
+    message += "`/myqa` - Your QA submissions\n"
+    message += "`/qa <ticket>` - QA details\n"
+    if is_qa_reviewer or is_privileged:
+        message += "`/pendingqa` - All pending QA (QA/Admin)\n"
+        message += "`/reviewingqa` - QA you're reviewing (QA/Admin)\n"
+        message += "`/unreviewedqa` - Old pending QA (QA/Admin)\n"
+        message += "`/approve <ticket>` - Approve QA (QA/Admin)\n"
+        message += "`/reject <ticket>` - Reject QA (QA/Admin)\n"
+    message += "`/reopenqa <ticket>` - Resubmit after rejection\n\n"
+    
+    # ===== ATTENDANCE COMMANDS (All Users) =====
+    message += "**⏰ ATTENDANCE & BREAKS**\n"
+    message += "`/checkin` - Manual check-in\n"
+    message += "`/checkout` - Manual check-out\n"
+    message += "`/break` - Start a break\n"
+    message += "`/recheckin` - End break (resume work)\n"
+    message += "`/myattendance` - Your attendance history\n\n"
+    
+    # ===== LEAVE REQUEST COMMANDS (All Users) =====
+    message += "**🏖️ LEAVE REQUESTS**\n"
+    message += "`/requestleave <start> <end> <reason>` - Request leave\n"
+    message += "  Format: `/requestleave 2026-05-10 2026-05-15 Vacation`\n"
+    message += "  Optional: Add `@replacement` at end\n"
+    message += "`/myleave` - Your leave requests\n"
+    if is_privileged:
+        message += "`/pendingleave` - Pending requests (Admin/Manager)\n"
+    message += "\n"
+    
+    # ===== TASK ROUTING & ASSIGNMENT (Privileged) =====
+    if is_privileged:
+        message += "**🎯 TASK ROUTING & ASSIGNMENT** (Admin/Manager/Owner)\n"
+        message += "`/bulkassign @user1,@user2 <ticket>` - Bulk assign\n"
+        message += "`/assignto <ticket> @user` - Assign to user\n"
+        message += "`/workload` - Team workload dashboard\n"
+        message += "`/block <ticket> <blocker>` - Create dependency\n"
+        message += "`/unblock <ticket> <blocker>` - Remove dependency\n\n"
+    
+    # ===== ADMIN COMMANDS (Privileged Only) =====
+    if is_privileged:
+        message += "**⚙️ ADMIN COMMANDS** (Admin/Manager/Owner)\n"
+        message += "`/edit` - Edit bot messages\n"
+        message += "`/pin` - Pin message options\n"
+        message += "`/attendance <user>` - View user attendance\n"
+        message += "`/attendancedetails <user> <date>` - Detailed attendance\n"
+        message += "`/dailysummary` - Trigger daily summary\n\n"
+    
+    # ===== DATABASE & SYNC (Privileged Only) =====
+    if is_privileged:
+        message += "**🔄 DATABASE & SYNC** (Admin/Manager/Owner)\n"
+        message += "`/cleantasks` - Clean orphaned tasks\n"
+        message += "`/syncdb` - Aggressive database cleanup\n"
+        message += "`/resetdb` - Reset database to reality\n"
+        message += "`/scantopic` - Scan Task Allocation topic\n"
+        message += "`/syncdebug` - Sync service status\n"
+        message += "`/debugtasks` - Debug task detection\n\n"
+    
+    # ===== INFORMATION & HELP (All Users) =====
+    message += "**ℹ️ INFORMATION & HELP** (All Users)\n"
+    message += "`/help` - General help & overview\n"
+    message += "`/taskhelp` - Task allocation guide\n"
+    message += "`/brand` - Available brands\n"
+    message += "`/support` - Support type selection\n"
+    message += "`/commands` - This command list\n\n"
+    
+    # ===== REACTION GUIDE =====
+    message += "**👍 REACTION GUIDE**\n"
+    message += "React to task messages with:\n"
+    message += "  👍 - Start task (ASSIGNED → STARTED)\n"
+    message += "  ❤️ - Approve QA (QA_SUBMITTED → APPROVED)\n"
+    message += "  👎 - Reject QA (QA_SUBMITTED → REJECTED)\n"
+    if is_privileged:
+        message += "  🔥 - Add exemption (Admin/Manager only)\n"
+    message += "\n"
+    
+    # ===== FOOTER =====
+    message += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+    message += "💡 **Tips:**\n"
+    message += "• Copy and paste commands to use them\n"
+    message += "• Use `/help` for detailed information\n"
+    message += "• Check topic guides for workflow details\n"
+    message += "• React with 👍 to extend message lifetime\n"
     
     # Send message to DM
     try:
@@ -6252,6 +6310,21 @@ def setup_command_handlers(application: Application, config: Config):
     application.add_handler(CommandHandler("overduetasks", cmd_overduetasks))
     application.add_handler(CommandHandler("filter", cmd_filter))
     application.add_handler(CommandHandler("taskstats", cmd_taskstats))
+    application.add_handler(CommandHandler("bulkassign", cmd_bulkassign))
+    
+    # Task dependency commands
+    application.add_handler(CommandHandler("block", cmd_block))
+    application.add_handler(CommandHandler("unblock", cmd_unblock))
+    
+    # Task routing commands
+    application.add_handler(CommandHandler("assignto", cmd_assignto))
+    application.add_handler(CommandHandler("workload", cmd_workload))
+    
+    # Leave request commands
+    from src.bot.handlers.leave_handler import cmd_requestleave, cmd_myleave, cmd_pendingleave
+    application.add_handler(CommandHandler("requestleave", cmd_requestleave))
+    application.add_handler(CommandHandler("myleave", cmd_myleave))
+    application.add_handler(CommandHandler("pendingleave", cmd_pendingleave))
     
     # Add callback handlers for button selections
     application.add_handler(CallbackQueryHandler(handle_brand_selection, pattern="^brand:"))
@@ -7386,6 +7459,706 @@ async def cmd_debugtasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context=context,
             chat_id=update.message.chat_id,
             text=error_msg,
+            parse_mode='Markdown',
+            message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+            delete_after_seconds=15,
+            warning_text=True
+        )
+
+
+async def cmd_bulkassign(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /bulkassign command - assign task to multiple users."""
+    user_id = update.message.from_user.id
+    config = context.bot_data.get('config')
+    task_service = context.bot_data.get('task_service')
+    user_repo = context.bot_data.get('user_repository')
+    
+    # Permission check - only admins/managers/owners
+    is_privileged = (
+        user_id in config.ADMINISTRATORS or
+        user_id in config.MANAGERS or
+        user_id in config.OWNERS
+    )
+    
+    if not is_privileged:
+        await send_auto_delete_message(
+            context=context,
+            chat_id=update.message.chat_id,
+            text="❌ **Access Denied**\n\nOnly Administrators, Managers, and Owners can bulk assign tasks.",
+            parse_mode='Markdown',
+            message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+            delete_after_seconds=15,
+            warning_text=True
+        )
+        return
+    
+    # Parse command: /bulkassign @user1,@user2 <ticket>
+    if not context.args or len(context.args) < 2:
+        await send_auto_delete_message(
+            context=context,
+            chat_id=update.message.chat_id,
+            text="❌ **Invalid Format**\n\nUsage: `/bulkassign @user1,@user2,@user3 POV260501`\n\nExample: `/bulkassign @john,@jane,@bob POV260501`",
+            parse_mode='Markdown',
+            message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+            delete_after_seconds=20,
+            warning_text=True
+        )
+        return
+    
+    # Parse usernames and ticket
+    usernames_str = context.args[0]
+    ticket = context.args[1].upper()
+    
+    # Parse usernames (remove @ if present)
+    usernames = [u.lstrip('@').lower() for u in usernames_str.split(',')]
+    
+    # Get task
+    task = await task_service.get_task(ticket)
+    if not task:
+        await send_auto_delete_message(
+            context=context,
+            chat_id=update.message.chat_id,
+            text=f"❌ **Task Not Found**\n\nNo task found with ticket: `{ticket}`",
+            parse_mode='Markdown',
+            message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+            delete_after_seconds=15,
+            warning_text=True
+        )
+        return
+    
+    # Resolve usernames to user IDs
+    assignee_ids = []
+    failed_users = []
+    
+    for username in usernames:
+        user = await user_repo.get_user_by_username(username)
+        if user:
+            assignee_ids.append(user.user_id)
+        else:
+            failed_users.append(username)
+    
+    if not assignee_ids:
+        await send_auto_delete_message(
+            context=context,
+            chat_id=update.message.chat_id,
+            text=f"❌ **No Valid Users**\n\nCould not find any of these users: {', '.join(failed_users)}",
+            parse_mode='Markdown',
+            message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+            delete_after_seconds=15,
+            warning_text=True
+        )
+        return
+    
+    # Update task with new assignees
+    try:
+        db_adapter = context.bot_data.get('db_adapter')
+        
+        # Clear existing assignees
+        await db_adapter.conn.execute(
+            "DELETE FROM task_assignees WHERE ticket = ?",
+            (ticket,)
+        )
+        
+        # Add new assignees
+        for idx, assignee_id in enumerate(assignee_ids):
+            is_primary = (idx == 0)
+            await db_adapter.conn.execute("""
+                INSERT INTO task_assignees (ticket, assignee_id, status, assigned_at, is_primary)
+                VALUES (?, ?, ?, ?, ?)
+            """, (ticket, assignee_id, 'ASSIGNED', datetime.now().isoformat(), 1 if is_primary else 0))
+        
+        await db_adapter.conn.commit()
+        
+        # Update task's primary assignee
+        task.assignee_id = assignee_ids[0]
+        await task_service.task_repo.update_task(task)
+        
+        # Send confirmation
+        assignee_list = ", ".join([f"@{u}" for u in usernames if u not in [fu for fu in failed_users]])
+        
+        success_msg = f"""✅ **Bulk Assignment Complete**
+
+**Task:** #{ticket}
+**Assigned To:** {assignee_list}
+**Count:** {len(assignee_ids)} users"""
+        
+        if failed_users:
+            success_msg += f"\n\n⚠️ **Failed:** {', '.join(failed_users)} (not found)"
+        
+        await send_auto_delete_message(
+            context=context,
+            chat_id=update.message.chat_id,
+            text=success_msg,
+            parse_mode='Markdown',
+            message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+            delete_after_seconds=20,
+            warning_text=True
+        )
+        
+        # Send DM to each assignee
+        from src.utils.message_utils import send_auto_delete_dm
+        from src.utils.link_builder import build_message_link
+        
+        task_link = build_message_link(config.TELEGRAM_GROUP_ID, task.message_id)
+        
+        for assignee_id in assignee_ids:
+            try:
+                await send_auto_delete_dm(
+                    context=context,
+                    user_id=assignee_id,
+                    text=f"""📋 **Task Assigned (Bulk)**
+
+**Task:** #{ticket}
+**Brand:** {task.brand}
+**Assigned with:** {len(assignee_ids)} other users
+
+[📎 View Task]({task_link})
+
+React with 👍 to start working!""",
+                    delete_after_seconds=120
+                )
+            except Exception as e:
+                logger.warning(f"Failed to send bulk assign DM to user {assignee_id}: {e}")
+        
+        logger.info(f"✅ Bulk assigned task {ticket} to {len(assignee_ids)} users")
+        
+    except Exception as e:
+        logger.error(f"Error bulk assigning task: {e}", exc_info=True)
+        await send_auto_delete_message(
+            context=context,
+            chat_id=update.message.chat_id,
+            text=f"❌ **Error**\n\nFailed to bulk assign task: {str(e)}",
+            parse_mode='Markdown',
+            message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+            delete_after_seconds=15,
+            warning_text=True
+        )
+
+
+async def cmd_block(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /block command - mark a task as blocked by another task."""
+    user_id = update.message.from_user.id
+    config = context.bot_data.get('config')
+    task_service = context.bot_data.get('task_service')
+    
+    # Permission check - only admins/managers/owners
+    is_privileged = (
+        user_id in config.ADMINISTRATORS or
+        user_id in config.MANAGERS or
+        user_id in config.OWNERS
+    )
+    
+    if not is_privileged:
+        await send_auto_delete_message(
+            context=context,
+            chat_id=update.message.chat_id,
+            text="❌ **Access Denied**\n\nOnly Administrators, Managers, and Owners can block tasks.",
+            parse_mode='Markdown',
+            message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+            delete_after_seconds=15,
+            warning_text=True
+        )
+        return
+    
+    # Parse command: /block <ticket> <blocker_ticket>
+    if not context.args or len(context.args) < 2:
+        await send_auto_delete_message(
+            context=context,
+            chat_id=update.message.chat_id,
+            text="❌ **Invalid Format**\n\nUsage: `/block POV260501 POV260502`\n\nThis marks POV260501 as blocked by POV260502",
+            parse_mode='Markdown',
+            message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+            delete_after_seconds=20,
+            warning_text=True
+        )
+        return
+    
+    ticket = context.args[0].upper()
+    blocker_ticket = context.args[1].upper()
+    
+    # Validate both tasks exist
+    task = await task_service.get_task(ticket)
+    blocker_task = await task_service.get_task(blocker_ticket)
+    
+    if not task:
+        await send_auto_delete_message(
+            context=context,
+            chat_id=update.message.chat_id,
+            text=f"❌ **Task Not Found**\n\nNo task found with ticket: `{ticket}`",
+            parse_mode='Markdown',
+            message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+            delete_after_seconds=15,
+            warning_text=True
+        )
+        return
+    
+    if not blocker_task:
+        await send_auto_delete_message(
+            context=context,
+            chat_id=update.message.chat_id,
+            text=f"❌ **Blocker Task Not Found**\n\nNo task found with ticket: `{blocker_ticket}`",
+            parse_mode='Markdown',
+            message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+            delete_after_seconds=15,
+            warning_text=True
+        )
+        return
+    
+    # Prevent self-blocking
+    if ticket == blocker_ticket:
+        await send_auto_delete_message(
+            context=context,
+            chat_id=update.message.chat_id,
+            text=f"❌ **Invalid Dependency**\n\nA task cannot be blocked by itself.",
+            parse_mode='Markdown',
+            message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+            delete_after_seconds=15,
+            warning_text=True
+        )
+        return
+    
+    try:
+        # Add dependency
+        success = await task_service.task_repo.add_dependency(ticket, blocker_ticket, user_id)
+        
+        if success:
+            response = f"""✅ **Dependency Added**
+
+**Task:** #{ticket}
+**Blocked By:** #{blocker_ticket}
+**Set By:** @{update.message.from_user.username or update.message.from_user.first_name}
+
+{ticket} cannot be marked as APPROVED until {blocker_ticket} is completed."""
+            
+            await send_auto_delete_message(
+                context=context,
+                chat_id=update.message.chat_id,
+                text=response,
+                parse_mode='Markdown',
+                message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+                delete_after_seconds=20,
+                warning_text=True
+            )
+            
+            # Send DM to assignee of blocked task
+            from src.utils.message_utils import send_auto_delete_dm
+            from src.utils.link_builder import build_message_link
+            
+            task_link = build_message_link(config.TELEGRAM_GROUP_ID, task.message_id)
+            blocker_link = build_message_link(config.TELEGRAM_GROUP_ID, blocker_task.message_id)
+            
+            dm_text = f"""🚫 **Task Blocked**
+
+**Your Task:** #{ticket}
+**Blocked By:** #{blocker_ticket}
+
+Your task cannot be marked as completed until the blocking task is resolved.
+
+[📎 View Your Task]({task_link})
+[📎 View Blocking Task]({blocker_link})"""
+            
+            try:
+                await send_auto_delete_dm(
+                    context=context,
+                    user_id=task.assignee_id,
+                    text=dm_text,
+                    delete_after_seconds=120
+                )
+            except Exception as e:
+                logger.warning(f"Failed to send block notification DM to user {task.assignee_id}: {e}")
+            
+            logger.info(f"✅ Added dependency: {ticket} blocked by {blocker_ticket}")
+        else:
+            await send_auto_delete_message(
+                context=context,
+                chat_id=update.message.chat_id,
+                text=f"❌ **Error**\n\nFailed to add dependency (may already exist)",
+                parse_mode='Markdown',
+                message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+                delete_after_seconds=15,
+                warning_text=True
+            )
+    
+    except Exception as e:
+        logger.error(f"Error blocking task: {e}", exc_info=True)
+        await send_auto_delete_message(
+            context=context,
+            chat_id=update.message.chat_id,
+            text=f"❌ **Error**\n\nFailed to block task: {str(e)}",
+            parse_mode='Markdown',
+            message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+            delete_after_seconds=15,
+            warning_text=True
+        )
+
+
+async def cmd_unblock(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /unblock command - remove a task dependency."""
+    user_id = update.message.from_user.id
+    config = context.bot_data.get('config')
+    task_service = context.bot_data.get('task_service')
+    
+    # Permission check - only admins/managers/owners
+    is_privileged = (
+        user_id in config.ADMINISTRATORS or
+        user_id in config.MANAGERS or
+        user_id in config.OWNERS
+    )
+    
+    if not is_privileged:
+        await send_auto_delete_message(
+            context=context,
+            chat_id=update.message.chat_id,
+            text="❌ **Access Denied**\n\nOnly Administrators, Managers, and Owners can unblock tasks.",
+            parse_mode='Markdown',
+            message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+            delete_after_seconds=15,
+            warning_text=True
+        )
+        return
+    
+    # Parse command: /unblock <ticket> <blocker_ticket>
+    if not context.args or len(context.args) < 2:
+        await send_auto_delete_message(
+            context=context,
+            chat_id=update.message.chat_id,
+            text="❌ **Invalid Format**\n\nUsage: `/unblock POV260501 POV260502`\n\nThis removes the block of POV260501 by POV260502",
+            parse_mode='Markdown',
+            message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+            delete_after_seconds=20,
+            warning_text=True
+        )
+        return
+    
+    ticket = context.args[0].upper()
+    blocker_ticket = context.args[1].upper()
+    
+    try:
+        # Remove dependency
+        success = await task_service.task_repo.remove_dependency(ticket, blocker_ticket)
+        
+        if success:
+            response = f"""✅ **Dependency Removed**
+
+**Task:** #{ticket}
+**No Longer Blocked By:** #{blocker_ticket}
+**Removed By:** @{update.message.from_user.username or update.message.from_user.first_name}
+
+{ticket} can now be marked as APPROVED."""
+            
+            await send_auto_delete_message(
+                context=context,
+                chat_id=update.message.chat_id,
+                text=response,
+                parse_mode='Markdown',
+                message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+                delete_after_seconds=20,
+                warning_text=True
+            )
+            
+            # Send DM to assignee of unblocked task
+            from src.utils.message_utils import send_auto_delete_dm
+            from src.utils.link_builder import build_message_link
+            
+            task = await task_service.get_task(ticket)
+            if task:
+                task_link = build_message_link(config.TELEGRAM_GROUP_ID, task.message_id)
+                
+                dm_text = f"""✅ **Task Unblocked**
+
+**Your Task:** #{ticket}
+**Previously Blocked By:** #{blocker_ticket}
+
+Your task is no longer blocked and can now be marked as completed!
+
+[📎 View Your Task]({task_link})"""
+                
+                try:
+                    await send_auto_delete_dm(
+                        context=context,
+                        user_id=task.assignee_id,
+                        text=dm_text,
+                        delete_after_seconds=120
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to send unblock notification DM to user {task.assignee_id}: {e}")
+            
+            logger.info(f"✅ Removed dependency: {ticket} no longer blocked by {blocker_ticket}")
+        else:
+            await send_auto_delete_message(
+                context=context,
+                chat_id=update.message.chat_id,
+                text=f"❌ **Error**\n\nDependency not found or failed to remove",
+                parse_mode='Markdown',
+                message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+                delete_after_seconds=15,
+                warning_text=True
+            )
+    
+    except Exception as e:
+        logger.error(f"Error unblocking task: {e}", exc_info=True)
+        await send_auto_delete_message(
+            context=context,
+            chat_id=update.message.chat_id,
+            text=f"❌ **Error**\n\nFailed to unblock task: {str(e)}",
+            parse_mode='Markdown',
+            message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+            delete_after_seconds=15,
+            warning_text=True
+        )
+
+
+async def cmd_assignto(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /assignto command - manually assign task to a specific user."""
+    user_id = update.message.from_user.id
+    config = context.bot_data.get('config')
+    task_service = context.bot_data.get('task_service')
+    user_repo = context.bot_data.get('user_repository')
+    
+    # Permission check - only admins/managers/owners
+    is_privileged = (
+        user_id in config.ADMINISTRATORS or
+        user_id in config.MANAGERS or
+        user_id in config.OWNERS
+    )
+    
+    if not is_privileged:
+        await send_auto_delete_message(
+            context=context,
+            chat_id=update.message.chat_id,
+            text="❌ **Access Denied**\n\nOnly Administrators, Managers, and Owners can manually assign tasks.",
+            parse_mode='Markdown',
+            message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+            delete_after_seconds=15,
+            warning_text=True
+        )
+        return
+    
+    # Parse command: /assignto <ticket> @username
+    if not context.args or len(context.args) < 2:
+        await send_auto_delete_message(
+            context=context,
+            chat_id=update.message.chat_id,
+            text="❌ **Invalid Format**\n\nUsage: `/assignto POV260501 @john`\n\nExample: `/assignto POV260501 @john`",
+            parse_mode='Markdown',
+            message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+            delete_after_seconds=20,
+            warning_text=True
+        )
+        return
+    
+    ticket = context.args[0].upper()
+    username = context.args[1].lstrip('@').lower()
+    
+    # Get task
+    task = await task_service.get_task(ticket)
+    if not task:
+        await send_auto_delete_message(
+            context=context,
+            chat_id=update.message.chat_id,
+            text=f"❌ **Task Not Found**\n\nNo task found with ticket: `{ticket}`",
+            parse_mode='Markdown',
+            message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+            delete_after_seconds=15,
+            warning_text=True
+        )
+        return
+    
+    # Get user by username
+    target_user = await user_repo.get_user_by_username(username)
+    if not target_user:
+        await send_auto_delete_message(
+            context=context,
+            chat_id=update.message.chat_id,
+            text=f"❌ **User Not Found**\n\nNo user found with username: `@{username}`",
+            parse_mode='Markdown',
+            message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+            delete_after_seconds=15,
+            warning_text=True
+        )
+        return
+    
+    try:
+        # Update task assignee
+        task.assignee_id = target_user.user_id
+        await task_service.task_repo.db.conn.execute(
+            "UPDATE tasks SET assignee_id = ? WHERE ticket = ?",
+            (target_user.user_id, ticket)
+        )
+        await task_service.task_repo.db.conn.commit()
+        
+        # Check if target user is on leave
+        leave_warning = ""
+        if target_user.is_on_leave:
+            leave_warning = "\n\n⚠️ **WARNING:** This user is currently on leave!"
+        
+        response = f"""✅ **Task Reassigned**
+
+**Task:** #{ticket}
+**Brand:** {task.brand}
+**New Assignee:** @{target_user.username}
+**Assigned By:** @{update.message.from_user.username or update.message.from_user.first_name}{leave_warning}"""
+        
+        await send_auto_delete_message(
+            context=context,
+            chat_id=update.message.chat_id,
+            text=response,
+            parse_mode='Markdown',
+            message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+            delete_after_seconds=20,
+            warning_text=True
+        )
+        
+        # Send DM to new assignee
+        from src.utils.message_utils import send_auto_delete_dm
+        from src.utils.link_builder import build_message_link
+        
+        task_link = build_message_link(config.TELEGRAM_GROUP_ID, task.message_id)
+        
+        dm_text = f"""📋 **Task Reassigned**
+
+**Task:** #{ticket}
+**Brand:** {task.brand}
+**Reassigned By:** @{update.message.from_user.username or update.message.from_user.first_name}
+
+[📎 View Task]({task_link})
+
+React with 👍 to start working!"""
+        
+        try:
+            await send_auto_delete_dm(
+                context=context,
+                user_id=target_user.user_id,
+                text=dm_text,
+                delete_after_seconds=120
+            )
+        except Exception as e:
+            logger.warning(f"Failed to send reassignment DM to user {target_user.user_id}: {e}")
+        
+        logger.info(f"✅ Reassigned task {ticket} to user {target_user.user_id} (@{target_user.username})")
+        
+    except Exception as e:
+        logger.error(f"Error reassigning task: {e}", exc_info=True)
+        await send_auto_delete_message(
+            context=context,
+            chat_id=update.message.chat_id,
+            text=f"❌ **Error**\n\nFailed to reassign task: {str(e)}",
+            parse_mode='Markdown',
+            message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+            delete_after_seconds=15,
+            warning_text=True
+        )
+
+
+async def cmd_workload(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /workload command - show team workload summary."""
+    user_id = update.message.from_user.id
+    config = context.bot_data.get('config')
+    task_routing_service = context.bot_data.get('task_routing_service')
+    
+    # Permission check - only admins/managers/owners
+    is_privileged = (
+        user_id in config.ADMINISTRATORS or
+        user_id in config.MANAGERS or
+        user_id in config.OWNERS
+    )
+    
+    if not is_privileged:
+        await send_auto_delete_message(
+            context=context,
+            chat_id=update.message.chat_id,
+            text="❌ **Access Denied**\n\nOnly Administrators, Managers, and Owners can view team workload.",
+            parse_mode='Markdown',
+            message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+            delete_after_seconds=15,
+            warning_text=True
+        )
+        return
+    
+    if not task_routing_service:
+        await send_auto_delete_message(
+            context=context,
+            chat_id=update.message.chat_id,
+            text="❌ **Service Not Available**\n\nTask routing service not initialized.",
+            parse_mode='Markdown',
+            message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+            delete_after_seconds=15,
+            warning_text=True
+        )
+        return
+    
+    # Delete the command message
+    try:
+        await update.message.delete()
+        logger.info(f"Deleted /workload command message from user {user_id}")
+    except Exception as e:
+        logger.warning(f"Failed to delete /workload command: {e}")
+    
+    try:
+        # Get team workload summary
+        workload_summary = await task_routing_service.get_team_workload_summary()
+        
+        if not workload_summary:
+            await send_auto_delete_message(
+                context=context,
+                chat_id=update.message.chat_id,
+                text="❌ **No Data**\n\nCould not retrieve team workload data.",
+                parse_mode='Markdown',
+                message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+                delete_after_seconds=15,
+                warning_text=True
+            )
+            return
+        
+        # Build response
+        response = "📊 **Team Workload Summary**\n\n"
+        response += "**Sorted by Workload (Highest First)**\n\n"
+        
+        for i, user_data in enumerate(workload_summary, 1):
+            username = user_data.get('username', 'Unknown')
+            workload_score = user_data.get('workload_score', 0)
+            total_active = user_data.get('total_active', 0)
+            assigned = user_data.get('assigned', 0)
+            started = user_data.get('started', 0)
+            qa = user_data.get('qa_submitted', 0)
+            rejected = user_data.get('rejected', 0)
+            
+            # Workload bar
+            bar_length = int(workload_score / 10)
+            bar = "█" * bar_length + "░" * (10 - bar_length)
+            
+            # Status emoji
+            if workload_score >= 80:
+                status = "🔴"  # High
+            elif workload_score >= 50:
+                status = "🟡"  # Medium
+            else:
+                status = "🟢"  # Low
+            
+            response += f"{i}. {status} @{username}\n"
+            response += f"   Workload: {bar} {workload_score:.0f}%\n"
+            response += f"   Tasks: {total_active} active (📌 {assigned}, ⚙️ {started}, 🔍 {qa}, ❌ {rejected})\n\n"
+        
+        response += "_Workload score: 0-100 (lower is better for new assignments)_"
+        
+        await send_auto_delete_message(
+            context=context,
+            chat_id=update.message.chat_id,
+            text=response,
+            parse_mode='Markdown',
+            message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+            delete_after_seconds=60,
+            warning_text=True
+        )
+        
+        logger.info(f"✅ Sent team workload summary to user {user_id}")
+        
+    except Exception as e:
+        logger.error(f"Error in /workload command: {e}", exc_info=True)
+        await send_auto_delete_message(
+            context=context,
+            chat_id=update.message.chat_id,
+            text=f"❌ **Error**\n\nFailed to retrieve workload data: {str(e)}",
             parse_mode='Markdown',
             message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
             delete_after_seconds=15,

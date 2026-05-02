@@ -349,8 +349,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     restricted_topics = {
         config.TOPIC_OFFICIAL_DIRECTIVES: {
             'name': 'Official Directives',
-            'allowed': config.ADMINISTRATORS + config.OWNERS,
-            'reason': 'Only Administrators and Owners can post official directives.'
+            'allowed': admin_users,  # Admins, Managers, Owners
+            'reason': 'Only Administrators, Managers, and Owners can post official directives.'
         },
         config.TOPIC_CENTRAL_ARCHIVE: {
             'name': 'Central Archive',
@@ -400,8 +400,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 
                 topic_link = f"https://t.me/c/{group_id_clean}/{topic_id}"
                 
-                await context.bot.send_message(
-                    chat_id=user_id,
+                from src.utils.message_utils import send_auto_delete_dm
+                await send_auto_delete_dm(
+                    context=context,
+                    user_id=user_id,
                     text=f"""🚫 **Access Denied**
 
 You attempted to post a message in **{topic_info['name']}** topic.
@@ -415,8 +417,7 @@ Your message has been automatically deleted.
 **Important:** Do not attempt to delete messages in this topic. All activity is monitored and logged.
 
 If you believe you should have access to this topic, please contact an administrator.""",
-                    parse_mode='Markdown',
-                    disable_web_page_preview=True
+                    delete_after_seconds=60
                 )
                 logger.info(f"✉️ Sent topic restriction warning to user {user_id}")
             except Exception as e:
@@ -903,8 +904,10 @@ async def _handle_format_violation(context, update, user_id, error_msg, config):
     
     # Send correction DM to user
     try:
-        await context.bot.send_message(
-            chat_id=user_id,
+        from src.utils.message_utils import send_permanent_dm
+        await send_permanent_dm(
+            context=context,
+            user_id=user_id,
             text=f"""❌ **Task Format Error**
 
 Your message was deleted due to format violation.
@@ -933,8 +936,7 @@ Your message was deleted due to format violation.
 
 **Tip:** Use /newtask command for a pre-filled template!
 
-Please repost with correct format.""",
-            parse_mode='Markdown'
+Please repost with correct format."""
         )
         logger.info(f"📧 Sent format correction DM to user {user_id}")
     except Exception as e:
@@ -1113,10 +1115,12 @@ async def handle_qa_review(update, text, user_id, username, message_id, qa_servi
             except Exception as e:
                 logger.error(f"Failed to delete message: {e}")
         
-        # Send DM to user (DMs don't auto-delete)
+        # Send DM to user (permanent - educational)
         try:
-            await context.bot.send_message(
-                chat_id=user_id,
+            from src.utils.message_utils import send_permanent_dm
+            await send_permanent_dm(
+                context=context,
+                user_id=user_id,
                 text=f"""❌ **QA Submission Format Error**
 
 Your message was deleted due to format violation.
@@ -1135,8 +1139,7 @@ Your message was deleted due to format violation.
 • [BRAND] - Brand name with #
 • [ASSET] - Asset URL or description
 
-Please repost with correct format.""",
-                parse_mode='Markdown'
+Please repost with correct format."""
             )
             logger.info(f"Sent QA format error DM to user {user_id}")
         except Exception as e:
@@ -1222,10 +1225,12 @@ async def handle_core_operations(update, text, user_id, username, message_id, is
             except Exception as e:
                 logger.error(f"Failed to move malformed message to trash: {e}")
         
-        # Send DM to user (DMs don't auto-delete)
+        # Send DM to user (permanent - educational)
         try:
-            await context.bot.send_message(
-                chat_id=user_id,
+            from src.utils.message_utils import send_permanent_dm
+            await send_permanent_dm(
+                context=context,
+                user_id=user_id,
                 text=f"""❌ **Issue Format Error**
 
 Your message was deleted due to format violation.
@@ -1261,8 +1266,7 @@ Your message was deleted due to format violation.
 [ASSIGNEE] @techsupport
 ```
 
-Please repost with correct format.""",
-                parse_mode='Markdown'
+Please repost with correct format."""
             )
             logger.info(f"Sent issue format error DM to user {user_id}")
         except Exception as e:

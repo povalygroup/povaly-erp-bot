@@ -1,29 +1,13 @@
-📌 CORE OPERATIONS — STANDARD OPERATING PROTOCOL (SOP)
-━━━━━━━━━━━━━━━━━━━━
+📌 CORE OPERATIONS — ISSUE RESOLUTION HUB
 
-🎯 PURPOSE
-This topic is the structured issue-resolution hub of Povaly Group. All execution-related issues, technical problems, and operational blockers must be reported and resolved here in a strict system.
+🎯 PURPOSE: Structured issue-resolution hub for execution problems, technical debugging, and operational blockers.
 
 🔐 ACCESS CONTROL
-👑 Authorized Participants:
-• Chairman
-• CEO  
-• Administrative Managers
-• Assigned Team Members
+👑 Authorized: Chairman, CEO, Managers, Assigned Team
+👤 All Members: Can use
+🚫 No casual chat allowed
 
-👤 Usage: All members
-🚫 No casual chat or unrelated discussion allowed
-
-🧩 CORE FUNCTION
-Used strictly for:
-• Task-related issue reporting
-• Technical debugging
-• Requirement clarification
-• Execution support
-• Cross-team coordination
-
-📌 ISSUE ENTRY FORMAT (MANDATORY)
-Every issue must be posted in this exact structure:
+📝 ISSUE ENTRY FORMAT (MANDATORY)
 
 [TICKET] #POV-XXXX-XX (existing task ticket)
 [ISSUE] Short title
@@ -31,140 +15,84 @@ Every issue must be posted in this exact structure:
 [PRIORITY] LOW / MEDIUM / HIGH / CRITICAL
 [ASSIGNEE] @username (optional)
 
-**IMPORTANT:** The [TICKET] field must contain the ticket ID of an existing task that has the problem. Issues are for reporting problems with existing work, not creating new work items.
+Example:
+[TICKET] POV260501
+[ISSUE] Database connection timeout
+[DETAILS] Getting timeout errors when querying user data
+[PRIORITY] HIGH
+[ASSIGNEE] @tech.lead
 
-🔄 REACTION-BASED ISSUE SYSTEM
-Reactions define system state:
+🔄 REACTION-BASED SYSTEM
 
 👍 = CLAIM (user is handling issue)
 ❤️ = RESOLVED (final completion)
 👎 = INVALID / WRONG ISSUE
 
 Rules:
-• First 👍 = primary handler (store ownership)
+• First 👍 = primary handler
 • Multiple 👍 allowed (collaboration)
 • ❤️ marks final resolution
-• Only reactions control status (not text)
-
-💬 DISCUSSION SYSTEM (STRICT)
-• All replies must be under the original issue message
-• No new messages for same issue
-• No DM-based problem solving
-• Thread = single source of truth
+• Only reactions control status
 
 🤖 AUTOMATION LOGIC
 
-On 👍 reaction:
-→ store user as issue handler
-→ mark issue as IN_PROGRESS
+On 👍 (Claim):
+→ Store user as handler
+→ Mark as IN_PROGRESS
+→ Send DM to handler
 
-On ❤️ reaction:
-→ mark issue as RESOLVED
-→ lock issue state
-→ send DM to issue creator:
-   Message: "Issue [TICKET] has been resolved. Please review and continue your workflow."
+On ❤️ (Resolved):
+→ Mark as RESOLVED
+→ Lock issue state
+→ Send DM to creator
 
-On 👎 reaction:
-→ mark issue as INVALID (remind the issuer for this reject of issue, who rejects that also in that message)
+On 👎 (Invalid):
+→ Mark as INVALID
+→ Send DM to creator
 
-⏱️ ISSUE ESCALATION SYSTEM (REQUIRED)
-Implement time-based escalation:
+⏱️ ESCALATION (AUTOMATIC)
 
-Condition:
-• Issue has NO ❤️ (not resolved)
-• AND no activity or resolution within defined time (e.g., 2 hours or configurable)
+If not resolved within 2 hours:
+→ Alert sent to Admin Control Panel
+→ Shows ticket, status, assignee, time elapsed
 
-Then:
-Bot must send a message to ADMIN CONTROL PANEL topic with:
+⏰ AUTO REMINDER
 
-[TICKET] #POV-XXXX-XX
-[STATUS] NOT RESOLVED
-[ISSUE] Short title
-[ASSIGNEE] @username
-[TIME_ELAPSED] X hours
+If claimed but not resolved within 2 hours:
+→ Reminder DM to handler
+→ Repeats every 1 hour
 
-Message: "This issue has not been resolved within the expected time. Immediate attention required."
+⚡ COMMANDS
 
-Rules:
-• Escalation must trigger only once per issue (avoid spam)
-• If 👍 exists but no ❤️ → still eligible for escalation
-• If no 👍 → mark as UNATTENDED in escalation
-• If issue later gets ❤️ → no further escalation
+/myissues - View your claimed issues
+/openissues - View all unresolved issues
+/issue #TICKET - View full details
+/close #TICKET - Mark resolved
+/unresolved - View claimed but unresolved
+/inactive - View unclaimed issues
 
-⚙️ COMMAND SYSTEM (REQUIRED)
-Implement these commands:
+💬 DISCUSSION SYSTEM
 
-/myissues
-Returns all issues claimed (👍) by the user:
-OPEN ISSUES #POV-XXXX-XX → issue title
+• All replies under original message
+• No new messages for same issue
+• Thread = single source of truth
 
-/openissues
-Returns all unresolved issues:
-• no ❤️ reaction
-• still active
+⚠️ TOPIC RULES
 
-/issue #TICKET
-Returns full issue details + direct message link
+✓ DO: Post issues, use format, include details, reply in thread
+✗ DON'T: Post non-issues, skip fields, create duplicates
 
-/close #TICKET
-• bot finds issue
-• applies ❤️ reaction automatically
-• marks RESOLVED
-• triggers DM to creator
+🚫 WHAT DOESN'T BELONG HERE
 
-/unresolved
-List issues:
-• claimed but not resolved
-• sorted by time
-
-/inactive
-List issues:
-• no 👍 reaction after creation
-
-⏱️ AUTO REMINDER SYSTEM
-If user claimed issue (👍) but no ❤️ within defined time:
-Send reminder: "You have unresolved issues: #POV-XXXX-XX"
-
-🚫 WHAT DOES NOT BELONG HERE
 ❌ Task assignment → Task Allocation
-❌ Final submission → QA & Review
+❌ QA submissions → QA Review
 ❌ Asset storage → Brand Repository
 ❌ Official decisions → Official Directives
-❌ Casual conversation → Team Lounge
+❌ Casual chat → Team Lounge
 
-⚠️ ENFORCEMENT RULES
-❗ Invalid format → ignored
-❗ Non-reply discussion → invalid
-❗ Duplicate issue → reject
-❗ Must use TICKET for tracking
-❗ All logic must rely on reactions
+❓ NEED HELP?
 
-🏛 SYSTEM ROLE
-Core Operations is a structured issue-resolution engine.
-
-It:
-• tracks problems
-• assigns ownership
-• enables discussion
-• records resolution
-
-It does NOT:
-• assign tasks
-• approve work
-• store outputs
-
-🧠 FINAL DESIGN RULE
-One issue = One message
-One message = One thread
-One thread = One resolution
-
-No duplication. No fragmentation.
-
-⚙️ TECHNICAL REQUIREMENTS
-• Parse [TICKET] from messages
-• Track Telegram reactions in real-time
-• Store issue state in database
-• Support high message volume (1000+)
-• Map reactions → system state
-• Support command-based retrieval
-• Support timed escalation system
+View your issues? → Use /myissues command
+Check all issues? → Use /openissues command
+View details? → Use /issue #TICKET command
+Mark resolved? → Use /close #TICKET command

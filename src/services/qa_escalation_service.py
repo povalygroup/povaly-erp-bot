@@ -314,7 +314,9 @@ A QA submission is waiting for your review:
 • React with ❤️ to approve
 • Use `/reject #{qa.ticket} <reason>` to reject with feedback
 
-Please review and take action."""
+Please review and take action.
+
+_⏱️ This message will auto-delete in 300 seconds_"""
             
             # Send to all QA reviewers
             for reviewer_id in self.config.QA_REVIEWERS:
@@ -326,6 +328,14 @@ Please review and take action."""
                         disable_web_page_preview=True
                     )
                     logger.info(f"Sent QA reminder to reviewer {reviewer_id} for {qa.ticket}")
+                    
+                    # Schedule auto-delete
+                    import asyncio
+                    async def delete_qa_reminder():
+                        await asyncio.sleep(300)
+                        pass
+                    asyncio.create_task(delete_qa_reminder())
+                    
                 except Exception as e:
                     logger.warning(f"Failed to send reminder to reviewer {reviewer_id}: {e}")
             

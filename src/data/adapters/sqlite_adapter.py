@@ -302,8 +302,12 @@ class SQLiteAdapter:
                 message_id INTEGER NOT NULL,
                 reviewed_by INTEGER,
                 reviewed_at TEXT,
+                replacement_user_id INTEGER,
+                task_handover_ids TEXT,
+                is_notified INTEGER DEFAULT 0,
                 FOREIGN KEY(user_id) REFERENCES users(user_id),
-                FOREIGN KEY(reviewed_by) REFERENCES users(user_id)
+                FOREIGN KEY(reviewed_by) REFERENCES users(user_id),
+                FOREIGN KEY(replacement_user_id) REFERENCES users(user_id)
             )
         """)
         
@@ -384,6 +388,20 @@ class SQLiteAdapter:
             )
         """)
         
+        # Create task_dependencies table
+        await self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS task_dependencies (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ticket TEXT NOT NULL,
+                blocked_by_ticket TEXT NOT NULL,
+                created_at TIMESTAMP NOT NULL,
+                created_by INTEGER NOT NULL,
+                FOREIGN KEY (ticket) REFERENCES tasks(ticket) ON DELETE CASCADE,
+                FOREIGN KEY (blocked_by_ticket) REFERENCES tasks(ticket) ON DELETE CASCADE,
+                UNIQUE(ticket, blocked_by_ticket)
+            )
+        """)
+        
         # Create indexes for performance
         await self._create_indexes()
         
@@ -458,6 +476,10 @@ class SQLiteAdapter:
             # Ticket Metadata indexes
             ("idx_ticket_metadata_ticket", "ticket_metadata", "ticket"),
             ("idx_ticket_metadata_key", "ticket_metadata", "key"),
+            
+            # Task Dependencies indexes
+            ("idx_task_dependencies_ticket", "task_dependencies", "ticket"),
+            ("idx_task_dependencies_blocked_by", "task_dependencies", "blocked_by_ticket"),
         ]
         
         for index_name, table, column in indexes:
@@ -1007,11 +1029,12 @@ class SQLiteAdapter:
     # Leave Request operations
     async def insert_leave_request(self, leave_request):
         """Insert a leave request."""
+        import json
         from src.data.models.leave_request import LeaveRequest
         await self.conn.execute("""
             INSERT INTO leave_requests 
-            (user_id, start_date, end_date, reason, status, requested_at, message_id, reviewed_by, reviewed_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (user_id, start_date, end_date, reason, status, requested_at, message_id, reviewed_by, reviewed_at, replacement_user_id, task_handover_ids, is_notified)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             leave_request.user_id,
             leave_request.start_date.isoformat(),
@@ -1021,7 +1044,10 @@ class SQLiteAdapter:
             leave_request.requested_at.isoformat(),
             leave_request.message_id,
             leave_request.reviewed_by,
-            leave_request.reviewed_at.isoformat() if leave_request.reviewed_at else None
+            leave_request.reviewed_at.isoformat() if leave_request.reviewed_at else None,
+            leave_request.replacement_user_id,
+            json.dumps(leave_request.task_handover_ids) if leave_request.task_handover_ids else None,
+            1 if leave_request.is_notified else 0
         ))
         await self.conn.commit()
     
@@ -1123,6 +1149,65 @@ class SQLiteAdapter:
             audit.before_state, audit.after_state, audit.message_id
         ))
         await self.conn.commit()
+    
+    # Task dependency operations
+    
+    async def add_task_dependency(self, ticket: str, blocked_by_ticket: str, created_by: int):
+        """Add a dependency - ticket is blocked by blocked_by_ticket."""
+        try:
+            await self.conn.execute("""
+                INSERT INTO task_dependencies (ticket, blocked_by_ticket, created_at, created_by)
+                VALUES (?, ?, ?, ?)
+            """, (ticket, blocked_by_ticket, datetime.now().isoformat(), created_by))
+            await self.conn.commit()
+            return True
+        except Exception as e:
+            logger.error(f"Error adding task dependency: {e}")
+            return False
+    
+    async def remove_task_dependency(self, ticket: str, blocked_by_ticket: str):
+        """Remove a dependency."""
+        try:
+            await self.conn.execute("""
+                DELETE FROM task_dependencies 
+                WHERE ticket = ? AND blocked_by_ticket = ?
+            """, (ticket, blocked_by_ticket))
+            await self.conn.commit()
+            return True
+        except Exception as e:
+            logger.error(f"Error removing task dependency: {e}")
+            return False
+    
+    async def get_blocking_tasks(self, ticket: str) -> list:
+        """Get all tasks that are blocking this ticket."""
+        try:
+            async with self.conn.execute("""
+                SELECT blocked_by_ticket FROM task_dependencies 
+                WHERE ticket = ?
+            """, (ticket,)) as cursor:
+                rows = await cursor.fetchall()
+                return [row['blocked_by_ticket'] for row in rows]
+        except Exception as e:
+            logger.error(f"Error getting blocking tasks: {e}")
+            return []
+    
+    async def get_blocked_tasks(self, ticket: str) -> list:
+        """Get all tasks that are blocked by this ticket."""
+        try:
+            async with self.conn.execute("""
+                SELECT ticket FROM task_dependencies 
+                WHERE blocked_by_ticket = ?
+            """, (ticket,)) as cursor:
+                rows = await cursor.fetchall()
+                return [row['ticket'] for row in rows]
+        except Exception as e:
+            logger.error(f"Error getting blocked tasks: {e}")
+            return []
+    
+    async def has_blocking_tasks(self, ticket: str) -> bool:
+        """Check if ticket has any blocking tasks."""
+        blocking = await self.get_blocking_tasks(ticket)
+        return len(blocking) > 0
     
     async def close(self):
         """Close database connection."""

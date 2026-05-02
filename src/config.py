@@ -114,6 +114,17 @@ class Config:
     FEATURE_PREDICTIVE_ALERTS: bool = True
     FEATURE_ANALYTICS_DASHBOARD: bool = True
     FEATURE_DAILY_SUMMARY: bool = True
+    
+    # Task Routing Configuration
+    ENABLE_AUTO_ASSIGN: bool = False  # Enable automatic task assignment
+    PREFER_EXPERTISE: bool = True  # Prefer users with brand expertise when assigning
+    
+    # Leave Request Configuration
+    LEAVE_REQUEST_MIN_NOTICE_DAYS: int = 0  # Minimum days notice required (0 = no minimum)
+    LEAVE_REQUEST_MAX_DURATION_DAYS: int = 30  # Maximum leave duration
+    LEAVE_REQUEST_ALLOW_OVERLAPPING: bool = False  # Allow overlapping requests
+    LEAVE_REQUEST_REQUIRE_REPLACEMENT: bool = False  # Require replacement user
+    LEAVE_REQUEST_AUTO_REASSIGN_TASKS: bool = True  # Auto-reassign tasks to replacement
 
     @classmethod
     def load_from_env(cls) -> "Config":
@@ -362,6 +373,17 @@ class Config:
             FEATURE_PREDICTIVE_ALERTS=parse_bool("FEATURE_PREDICTIVE_ALERTS", True),
             FEATURE_ANALYTICS_DASHBOARD=parse_bool("FEATURE_ANALYTICS_DASHBOARD", True),
             FEATURE_DAILY_SUMMARY=parse_bool("FEATURE_DAILY_SUMMARY", True),
+            
+            # Task Routing Configuration
+            ENABLE_AUTO_ASSIGN=parse_bool("ENABLE_AUTO_ASSIGN", False),
+            PREFER_EXPERTISE=parse_bool("PREFER_EXPERTISE", True),
+            
+            # Leave Request Configuration
+            LEAVE_REQUEST_MIN_NOTICE_DAYS=parse_int("LEAVE_REQUEST_MIN_NOTICE_DAYS", 0),
+            LEAVE_REQUEST_MAX_DURATION_DAYS=parse_int("LEAVE_REQUEST_MAX_DURATION_DAYS", 30),
+            LEAVE_REQUEST_ALLOW_OVERLAPPING=parse_bool("LEAVE_REQUEST_ALLOW_OVERLAPPING", False),
+            LEAVE_REQUEST_REQUIRE_REPLACEMENT=parse_bool("LEAVE_REQUEST_REQUIRE_REPLACEMENT", False),
+            LEAVE_REQUEST_AUTO_REASSIGN_TASKS=parse_bool("LEAVE_REQUEST_AUTO_REASSIGN_TASKS", True),
         )
 
     def validate(self) -> None:

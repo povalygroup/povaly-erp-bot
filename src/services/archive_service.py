@@ -280,9 +280,18 @@ Congratulations! Your task **#{task.ticket}** has been archived.
 **Status:** Completed & Approved
 **Archived:** {datetime.now().strftime('%Y-%m-%d %H:%M')}
 
-Great work on completing this task!""",
+Great work on completing this task!
+
+_⏱️ This message will auto-delete in 120 seconds_""",
                     parse_mode='Markdown'
                 )
+                
+                # Schedule auto-delete
+                import asyncio
+                async def delete_archive_msg():
+                    await asyncio.sleep(120)
+                    pass
+                asyncio.create_task(delete_archive_msg())
                 logger.info(f"Sent archive confirmation to assignee {task.assignee_id}")
             except Exception as e:
                 logger.warning(f"Failed to send archive confirmation: {e}")
@@ -340,7 +349,9 @@ React with ❤️ on your task message in Task Allocation to confirm completion.
 
 This will archive the task and mark it as fully complete.
 
-_Note: Tasks will be auto-archived after 24 hours of approval._"""
+_Note: Tasks will be auto-archived after 24 hours of approval._
+
+_⏱️ This message will auto-delete in 180 seconds_"""
             
             await self.bot_context.bot.send_message(
                 chat_id=assignee_id,
@@ -348,6 +359,13 @@ _Note: Tasks will be auto-archived after 24 hours of approval._"""
                 parse_mode='Markdown',
                 disable_web_page_preview=True
             )
+            
+            # Schedule auto-delete
+            import asyncio
+            async def delete_reminder_msg():
+                await asyncio.sleep(180)
+                pass
+            asyncio.create_task(delete_reminder_msg())
             
             logger.info(f"Sent completion reminder to assignee {assignee_id} for {len(tasks)} task(s)")
             

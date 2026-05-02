@@ -109,3 +109,25 @@ class TaskRepository:
     async def get_pending_tasks_without_fire(self, before_date: datetime) -> List[Task]:
         """Get pending tasks without fire exemption created before a date."""
         return await self.db.get_pending_tasks_without_fire(before_date)
+    
+    # Task dependency operations
+    
+    async def add_dependency(self, ticket: str, blocked_by_ticket: str, created_by: int) -> bool:
+        """Add a dependency - ticket is blocked by blocked_by_ticket."""
+        return await self.db.add_task_dependency(ticket, blocked_by_ticket, created_by)
+    
+    async def remove_dependency(self, ticket: str, blocked_by_ticket: str) -> bool:
+        """Remove a dependency."""
+        return await self.db.remove_task_dependency(ticket, blocked_by_ticket)
+    
+    async def get_blocking_tasks(self, ticket: str) -> List[str]:
+        """Get all tasks that are blocking this ticket."""
+        return await self.db.get_blocking_tasks(ticket)
+    
+    async def get_blocked_tasks(self, ticket: str) -> List[str]:
+        """Get all tasks that are blocked by this ticket."""
+        return await self.db.get_blocked_tasks(ticket)
+    
+    async def has_blocking_tasks(self, ticket: str) -> bool:
+        """Check if ticket has any blocking tasks."""
+        return await self.db.has_blocking_tasks(ticket)

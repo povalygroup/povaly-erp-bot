@@ -1,0 +1,119 @@
+🎨 BRAND REPOSITORY GUIDE — ASSET MANAGEMENT
+
+🎯 PURPOSE: Centralized repository for all brand assets, guidelines, and resources.
+
+🔐 ACCESS CONTROL
+👑 Authorized Uploaders: Brand Managers, Admins, Owners
+👤 All Employees: Can view and download
+🚫 Employees CANNOT upload or modify
+
+📁 ASSET ORGANIZATION
+
+Assets organized by brand:
+
+POVALY (POV):
+• Logo files (PNG, SVG, PDF)
+• Color palette
+• Typography guidelines
+• Brand guidelines PDF
+• Social media templates
+
+VOROSABAJÁR (VRB):
+• Logo files
+• Color palette
+• Typography guidelines
+• Brand guidelines PDF
+• Marketing templates
+
+GSMAURA (GSM):
+• Logo files
+• Color palette
+• Typography guidelines
+• Brand guidelines PDF
+• Design templates
+
+📝 ASSET UPLOAD FORMAT
+
+[BRAND] #POV or #VRB or #GSM
+[ASSET_TYPE] Logo / Colors / Typography / Guidelines / Templates / Other
+[DESCRIPTION] What this asset is for
+[VERSION] 1.0 (or update version)
+[FILE_LINK] Google Drive / Dropbox / Direct link
+[NOTES] Any important notes
+
+Example:
+[BRAND] #POV
+[ASSET_TYPE] Logo
+[DESCRIPTION] Povaly main logo - horizontal version
+[VERSION] 2.1
+[FILE_LINK] https://drive.google.com/file/d/1ABC123
+[NOTES] Updated colors per 2026 brand refresh
+
+🔄 ASSET MANAGEMENT
+
+Pin important assets: Use [PINNED] marker
+Update assets: Post new version with updated [VERSION]
+Old versions remain visible for reference
+
+⚡ COMMANDS
+
+/brand - View all brands
+/brandassets #BRAND - View all assets for brand
+/asset #BRAND TYPE - View specific asset type
+/brandassets #BRAND TYPE - View assets by type
+/downloadasset #BRAND TYPE - Get latest asset link
+
+👷 FOR EMPLOYEES
+
+WORKFLOW:
+1. Find brand assets: /brandassets #BRAND
+2. Download asset: Click link
+3. Use latest version (highest number)
+4. Follow brand guidelines
+5. Maintain consistency
+6. Report issues in Core Operations
+
+⚠️ Important:
+• Always use latest version
+• Follow brand guidelines
+• Maintain consistency
+• Don't modify assets
+• Ask if unsure
+
+👑 FOR BRAND MANAGERS
+
+WORKFLOW:
+1. Organize assets
+2. Upload with proper format
+3. Include clear descriptions
+4. Provide working links
+5. Update versions regularly
+6. Pin frequently used assets
+7. Monitor usage
+8. Answer questions
+
+⚠️ Important:
+• Keep organized
+• Use consistent naming
+• Update regularly
+• Provide descriptions
+• Respond quickly
+
+⚠️ TOPIC RULES
+
+✓ DO: Post assets, use format, include descriptions, provide links
+✗ DON'T: Post non-assets, skip descriptions, upload broken files
+
+🚫 WHAT DOESN'T BELONG HERE
+
+❌ Task assignment → Task Allocation
+❌ Issue reporting → Core Operations
+❌ QA submissions → QA Review
+❌ Casual chat → Team Lounge
+
+❓ NEED HELP?
+
+Can't find asset? → Use /brandassets command
+Link broken? → Ask in Core Operations
+Need new asset? → Contact brand manager
+Unsure about guidelines? → Check Brand Guidelines PDF

@@ -1,271 +1,446 @@
-# Telegram Operations Automation System
+# 🚀 Povaly ERP Bot - Telegram Operations Automation System
 
-Enterprise-grade Telegram bot for managing task workflows, QA reviews, attendance tracking, and automated reporting for Povaly Group.
+A comprehensive enterprise-grade Telegram bot for managing task workflows, QA reviews, attendance tracking, issue management, and automated reporting.
 
-## Features
+## 📋 Table of Contents
 
-- **Task Management**: Reaction-based state transitions with unique ticket identifiers
-- **QA Workflow**: Structured submission, review, and approval process
-- **Attendance Tracking**: Automated check-in/check-out with late detection
-- **Leave Management**: Request submission and approval workflow
-- **Automated Reporting**: Daily summaries, sync reports, and weekly analytics
-- **Progressive Inactivity Management**: Multi-tier escalation system
-- **Violation Detection**: Automated enforcement of format and workflow rules
-- **Role-Based Access Control**: Granular permissions across all topics
-- **Smart Notifications**: Context-aware routing to appropriate channels
+- [Overview](#overview)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [Commands](#commands)
+- [Topic Guides](#topic-guides)
+- [Deployment](#deployment)
+- [Support](#support)
 
-## Quick Start
+---
+
+## 🎯 Overview
+
+Povaly ERP Bot is a multi-functional Telegram automation system designed for teams to:
+- **Manage Tasks** - Create, assign, track, and complete tasks with state transitions
+- **QA Reviews** - Submit work for review and manage approval workflows
+- **Track Issues** - Report, claim, and resolve issues with escalation
+- **Monitor Attendance** - Auto check-in, track breaks, manage leave requests
+- **Generate Reports** - Daily summaries, performance metrics, analytics
+- **Enforce Compliance** - Detect violations, track audit trails, role-based access
+
+**Current Status:** 95% Complete | 60+ Commands | 18 Services | 21 Database Tables
+
+---
+
+## ✨ Key Features
+
+### Task Management
+- ✅ Task creation with automatic ticket generation
+- ✅ Reaction-based state transitions (👍 start, ❤️ approve, 👎 reject, 🔥 urgent)
+- ✅ Multiple assignees per task
+- ✅ Task dependencies (blocking relationships)
+- ✅ Deadline reminders (24-hour and 1-hour warnings)
+- ✅ Bulk task assignment
+- ✅ Smart task routing based on workload and expertise
+- ✅ Task archival with completion time tracking
+
+### QA Workflow
+- ✅ QA submission with brand/asset tracking
+- ✅ Multiple QA reviewers per submission
+- ✅ Approval/rejection workflow
+- ✅ Rejection feedback with issue tracking
+- ✅ QA escalation for pending submissions
+- ✅ QA reminders for old submissions
+
+### Issue Management
+- ✅ Issue creation from tasks
+- ✅ Priority levels (LOW, MEDIUM, HIGH, CRITICAL)
+- ✅ Multiple issue handlers
+- ✅ Issue claiming and resolution
+- ✅ Issue escalation for unclaimed issues
+- ✅ Issue reminders and tracking
+
+### Attendance & Leave
+- ✅ Automatic check-in on first task
+- ✅ Manual check-in/check-out
+- ✅ Late check-in detection
+- ✅ Break tracking with limits
+- ✅ Leave request management
+- ✅ Task reassignment during leave
+- ✅ Leave approval workflow
+
+### Automated Reporting
+- ✅ Daily task summaries (00:00 GMT+6)
+- ✅ Daily sync reports (22:30 GMT+6)
+- ✅ Weekly performance reports (Sunday 22:30)
+- ✅ Performance metrics and analytics
+- ✅ Top performers tracking
+
+### Security & Compliance
+- ✅ Role-based access control (5 roles)
+- ✅ Granular permissions per topic
+- ✅ Format violation detection
+- ✅ Comprehensive audit trail
+- ✅ Permission violation alerts
+- ✅ Encrypted data storage
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Telegram Bot Layer                        │
+│  (Command Handler, Message Handler, Reaction Handler)       │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+┌────────────────────▼────────────────────────────────────────┐
+│                  Business Logic Layer                        │
+│  (Task Service, QA Service, Issue Service, etc.)            │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+┌────────────────────▼────────────────────────────────────────┐
+│                   Service Layer                              │
+│  (18 Background Services, Schedulers, Escalation)           │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+┌────────────────────▼────────────────────────────────────────┐
+│                 Data Access Layer                            │
+│  (12 Repositories, Database Adapters)                       │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+┌────────────────────▼────────────────────────────────────────┐
+│                  Database Layer                              │
+│  (SQLite, MongoDB, JSON - Configurable)                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 📦 Installation
 
 ### Prerequisites
+- Python 3.9+
+- Telegram Bot Token
+- Telegram Group with Topics enabled
+- Git
 
-- **Python 3.12 or 3.11** (Python 3.13 NOT supported yet)
-- Telegram Bot Token (get from @BotFather)
-- Telegram Group ID
+### Quick Start
 
-⚠️ **IMPORTANT**: Python 3.13 has compatibility issues with python-telegram-bot library. You MUST use Python 3.12 or 3.11.
-
-### Installation (Windows)
-
-1. **Install Python 3.12**
-   - Download from: https://www.python.org/downloads/release/python-3120/
-   - ☑ Check "Add Python to PATH" during installation
-   - If you have Python 3.13, uninstall it first
-
-2. **Run installer**
-   ```
-   install.bat
-   ```
-   
-   This will:
-   - Check Python installation
-   - Install all dependencies
-   - Create .env file
-   - Open .env for editing
-
-3. **Edit .env file**
-   - Set `TELEGRAM_BOT_TOKEN` (from @BotFather)
-   - Set `TELEGRAM_GROUP_ID` (your group ID)
-   - Update topic IDs if needed
-
-4. **Start bot**
-   ```
-   run.bat
-   ```
-   Or: `python -m src.main`
-
-### Installation (Linux/Mac)
-
+1. **Clone Repository**
 ```bash
-# Install dependencies
-chmod +x install.sh
+git clone https://github.com/povaly/povaly-erp-bot.git
+cd povaly-erp-bot
+```
+
+2. **Install Dependencies**
+```bash
 ./install.sh
-
-# Edit configuration
-cp .env.example .env
-nano .env  # Set your bot token and group ID
-
-# Run bot
-chmod +x run.sh
-./run.sh
+# or
+pip install -r requirements.txt
 ```
 
-### Configuration
-
-All configuration is managed through the `.env` file. See `.env.template` for a comprehensive list of all available parameters with documentation.
-
-**Required Parameters:**
-- `TELEGRAM_BOT_TOKEN`: Your Telegram Bot API token
-- `TELEGRAM_GROUP_ID`: The Telegram group ID where the bot operates
-- `DATABASE_ENCRYPTION_KEY`: 32-character encryption key for sensitive data
-- Topic IDs for all 10 topics
-- User role assignments (ADMINISTRATORS, MANAGERS, QA_REVIEWERS, OWNERS)
-
-## Architecture
-
-The system follows a layered architecture:
-
-```
-Bot Application Layer → Business Logic Layer → Service Layer → Data Access Layer
+3. **Configure Environment**
+```bash
+cp .env.template .env
+# Edit .env with your settings
 ```
 
-### Key Components
-
-- **Message Handler**: Processes incoming Telegram messages and reactions
-- **Topic Router**: Routes messages to appropriate handlers based on topic
-- **State Engine**: Manages task state transitions
-- **Violation Detection**: Identifies and handles rule violations
-- **Notification Router**: Routes notifications to appropriate channels
-- **Scheduler**: Triggers time-based operations
-- **Report Generator**: Generates formatted reports
-
-### Database Support
-
-The system supports three database backends:
-- **SQLite** (default): Lightweight, embedded database
-- **MongoDB**: Distributed, scalable database
-- **JSON**: File-based storage for development/testing
-
-Switch between databases by changing `DATABASE_TYPE` in `.env`.
-
-## Usage
-
-### Task Workflow
-
-1. **Create Task**: Post message with TICKET identifier in Task Allocation topic
-   ```
-   [PV-2404-1] @username Create video thumbnail
-   ```
-
-2. **Start Task**: Add 👍 reaction to task message
-
-3. **Submit for QA**: Post in QA & Review topic
-   ```
-   [PV-2404-1][PV][Video thumbnail]
-   ```
-
-4. **Approve/Reject**: QA Reviewer adds ❤️ (approve) or 👎 (reject) reaction
-
-5. **Provide Feedback** (if rejected): Post rejection details
-   ```
-   [PV-2404-1][Quality Issue][Low resolution][Increase to 1080p][@username]
-   ```
-
-### Attendance
-
-- **Check-in**: Automatically recorded on first 👍 reaction of the day
-- **Check-out**: Post check-out command in Attendance & Leave topic or auto check-out at 23:59
-
-### Leave Requests
-
-Post leave request in Attendance & Leave topic:
-```
-Leave request: 2024-01-15 to 2024-01-17
-Reason: Personal
+4. **Start Bot**
+```bash
+./start_bot_forever.sh
+# or
+python src/main.py
 ```
 
-Manager approves with ❤️ or rejects with 👎 reaction.
-
-## Reports
-
-### Daily Summary Messages (00:00 GMT+6)
-- Posted to Task Allocation and QA Review topics
-- Shows pending tasks grouped by assignee/reviewer
-- Includes starting ticket ID for the day
-
-### Daily Sync Reports (22:30 GMT+6)
-- Per-user task progress reports
-- Posted to Daily Sync topic
-- Includes completed, started, not touched, and rejected tasks
-
-### Weekly Reports (Sunday 22:30 GMT+6)
-- Team performance analytics
-- Top performers and performance alerts
-- Posted to Daily Sync topic
-
-## Development
-
-### Project Structure
-
-```
-telegram-ops-automation/
-├── src/                    # Source code
-│   ├── bot/               # Bot application layer
-│   ├── core/              # Business logic layer
-│   ├── services/          # Service layer
-│   ├── data/              # Data access layer
-│   ├── security/          # Security and access control
-│   └── utils/             # Utility functions
-├── tests/                 # Test suite
-├── scripts/               # Utility scripts
-├── docs/                  # Documentation
-└── data/                  # Runtime data directory
-```
-
-### Running Tests
+### Docker Deployment
 
 ```bash
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=src --cov-report=html
-
-# Run specific test category
-pytest -m unit
-pytest -m integration
+docker-compose up -d
 ```
 
-### Database Management
+---
+
+## ⚙️ Configuration
+
+### Required Environment Variables
+
+```env
+# Bot Configuration
+TELEGRAM_BOT_TOKEN=your_bot_token_here
+TELEGRAM_GROUP_ID=your_group_id_here
+
+# Database
+DATABASE_TYPE=sqlite
+DATABASE_PATH=./data/povaly_erp_bot.db
+DATABASE_ENCRYPTION_KEY=your_32_char_encryption_key_here
+
+# User Roles (comma-separated Telegram user IDs)
+ADMINISTRATORS=123456789,987654321
+MANAGERS=111111111,222222222
+QA_REVIEWERS=333333333,444444444
+OWNERS=555555555
+
+# Topic IDs (comma-separated)
+TOPIC_OFFICIAL_DIRECTIVES=1
+TOPIC_BRAND_REPOSITORY=2
+TOPIC_TASK_ALLOCATION=3
+TOPIC_CORE_OPERATIONS=4
+TOPIC_QA_REVIEW=5
+TOPIC_CENTRAL_ARCHIVE=6
+TOPIC_DAILY_SYNC=7
+TOPIC_ATTENDANCE_LEAVE=8
+TOPIC_ADMIN_CONTROL_PANEL=9
+TOPIC_BOARDROOM=10
+TOPIC_STRATEGIC_LOUNGE=11
+TOPIC_TRASH=12
+
+# Brand Codes
+BRAND_CODES=POV,BRD,MKT,DEV,QA
+
+# Timezone
+TIMEZONE=GMT+6
+
+# Feature Flags
+ENABLE_AUTO_ASSIGN=false
+PREFER_EXPERTISE=true
+FEATURE_AUTO_CHECKOUT=true
+FEATURE_DAILY_SUMMARY=true
+```
+
+### Optional Configuration
+
+```env
+# Inactivity Thresholds (hours)
+INACTIVITY_WARNING_HOURS=18
+INACTIVITY_MARK_HOURS=24
+INACTIVITY_ESCALATE_HOURS=48
+INACTIVITY_CRITICAL_HOURS=72
+
+# Attendance
+ATTENDANCE_LATE_CHECKIN_TIME=11:00
+ATTENDANCE_AUTO_CHECKOUT_TIME=23:59
+ATTENDANCE_MAX_BREAK_TIME_MINUTES=90
+ATTENDANCE_MAX_BREAK_COUNT=5
+
+# QA
+QA_ESCALATION_HOURS=24
+QA_REMINDER_HOURS=12
+
+# Leave Requests
+LEAVE_REQUEST_MIN_NOTICE_DAYS=0
+LEAVE_REQUEST_MAX_DURATION_DAYS=30
+LEAVE_REQUEST_AUTO_REASSIGN_TASKS=true
+
+# Reports
+DAILY_REPORT_TIME=22:30
+WEEKLY_REPORT_DAY=Sunday
+WEEKLY_REPORT_TIME=22:30
+DAILY_SUMMARY_TIME=00:00
+```
+
+---
+
+## 🎮 Usage
+
+### Basic Workflow
+
+1. **Create Task**
+   ```
+   /newtask
+   → Select brand
+   → Enter task details
+   → Task created and assigned
+   ```
+
+2. **Start Working**
+   - React with 👍 to task message
+   - Status changes to STARTED
+   - Auto check-in recorded
+
+3. **Submit for QA**
+   ```
+   /newqa
+   → Select task
+   → Submit for review
+   ```
+
+4. **QA Review**
+   - Reviewer reacts with 👍 to approve
+   - Or 👎 to reject with feedback
+
+5. **Complete Task**
+   - React with ❤️ to confirm completion
+   - Task archived automatically
+
+### Common Commands
+
+```
+/help              - Show help information
+/commands          - Show all available commands
+/mytasks           - View your assigned tasks
+/myissues          - View issues you created
+/myleave           - View your leave requests
+/myattendance      - View your attendance
+/checkin           - Manual check-in
+/checkout          - Manual check-out
+```
+
+---
+
+## 📚 Commands
+
+See `/commands` in bot for complete list with role-based filtering.
+
+**Quick Reference:**
+- **Task Commands:** `/newtask`, `/mytasks`, `/tasksbystate`, `/bulkassign`, `/block`, `/unblock`
+- **QA Commands:** `/newqa`, `/myqa`, `/pendingqa`, `/approve`, `/reject`
+- **Issue Commands:** `/newissue`, `/myissues`, `/openissues`, `/close`, `/reopen`
+- **Attendance Commands:** `/checkin`, `/checkout`, `/break`, `/myattendance`
+- **Leave Commands:** `/requestleave`, `/myleave`, `/pendingleave`
+- **Admin Commands:** `/workload`, `/assignto`, `/pendingleave`, `/attendance`
+
+---
+
+## 📖 Topic Guides
+
+Each topic has a dedicated guide document:
+
+1. **Official Directives** - Company announcements and policies
+2. **Brand Repository** - Brand assets and guidelines
+3. **Task Allocation** - Task creation and assignment
+4. **Core Operations** - Issue management and tracking
+5. **QA Review** - Quality assurance submissions
+6. **Central Archive** - Completed tasks archive
+7. **Daily Sync** - Daily reports and summaries
+8. **Attendance & Leave** - Attendance tracking and leave requests
+9. **Admin Control Panel** - Admin alerts and notifications
+10. **Boardroom** - Meeting notes and discussions
+11. **Strategic Lounge** - Strategy and planning
+12. **Trash** - Deleted messages archive
+
+See [Topic Guides](./docs/TOPIC_GUIDES.md) for detailed information.
+
+---
+
+## 🚀 Deployment
+
+### Production Deployment
+
+1. **Server Setup**
+   ```bash
+   # SSH into server
+   ssh user@145.79.25.42:65002
+   
+   # Navigate to bot directory
+   cd /home/u531179370/povaly-bot/povaly-erp-bot/
+   ```
+
+2. **Deploy Code**
+   ```bash
+   git pull origin main
+   ./stop_bot.sh
+   ./start_bot_forever.sh
+   ./check_bot.sh
+   ```
+
+3. **Monitor**
+   ```bash
+   tail -f data/logs/telegram_bot.log
+   ```
+
+### Docker Deployment
 
 ```bash
-# Initialize database
-python scripts/setup_database.py
-
-# Backup database
-python scripts/backup_database.py --output ./backups/backup-$(date +%Y%m%d).db
-
-# Restore from backup
-python scripts/restore_database.py --input ./backups/backup-20240115.db
-
-# Migrate between database types
-python scripts/migrate_database.py --source sqlite --target mongodb
+docker-compose -f docker-compose.yml up -d
+docker-compose logs -f
 ```
 
-## Deployment
+---
 
-### Docker Compose
+## 📊 Database
 
-See `docker-compose.yml` for multi-container setup with MongoDB.
+### Supported Databases
+- **SQLite** (default) - File-based, no setup required
+- **MongoDB** - For large-scale deployments
+- **JSON** - For simple file-based storage
 
-### systemd Service
+### Backup
 
-See `docs/deployment.md` for systemd service configuration.
+Automatic backups run daily at 23:00 GMT+6.
 
-### Cloud Platforms
+Manual backup:
+```bash
+cp data/povaly_erp_bot.db data/backups/povaly_erp_bot.db.backup
+```
 
-The system can be deployed to:
-- AWS ECS
-- Google Cloud Run
-- Azure Container Instances
-- Any Docker-compatible platform
+---
 
-## Monitoring
+## 🔐 Security
 
-### Health Checks
+### Role-Based Access Control
 
-The bot includes built-in health checks for:
-- Database connectivity
-- Telegram API connectivity
-- Scheduler status
-- System uptime
+| Role | Permissions |
+|------|-------------|
+| **REGULAR** | Create tasks, submit QA, report issues, check-in/out |
+| **QA_REVIEWER** | Approve/reject QA submissions |
+| **MANAGER** | Approve leave, view team workload, escalate issues |
+| **ADMIN** | Full system access, manage users, view all data |
+| **OWNER** | System configuration, database management |
 
-### Logging
+### Topic Restrictions
 
-- Structured JSON logs
-- Daily log rotation
-- Configurable retention period
-- Separate logs for different components
+Restricted topics (only admins/managers/owners can post):
+- Official Directives
+- Central Archive
+- Daily Sync
+- Admin Control Panel
+- Trash
 
-### Metrics
+---
 
-- Message processing rate
-- Database query performance
-- Notification delivery success rate
-- Scheduled job execution time
-- Error rates by category
+## 📞 Support
 
-## Security
+### Troubleshooting
 
-- Role-based access control with 4 user roles
-- Granular permissions per topic
-- Encrypted storage of sensitive data
-- Comprehensive audit trail
-- Permission violation detection and logging
+**Bot not responding:**
+```bash
+./check_bot.sh
+./stop_bot.sh
+./start_bot_forever.sh
+```
 
-## Support
+**Database issues:**
+```bash
+/syncdb          # Sync database with Telegram
+/resetdb         # Reset database
+/scantopic       # Scan topic for tasks
+```
 
-For issues, questions, or contributions, please refer to the project documentation in the `docs/` directory.
+**View logs:**
+```bash
+tail -f data/logs/telegram_bot.log
+tail -f data/logs/errors.log
+```
 
-## License
+### Contact
 
-[Your License Here]
+- **Issues:** Report in Admin Control Panel
+- **Questions:** Ask in Boardroom topic
+- **Bugs:** Create issue in repository
+
+---
+
+## 📝 License
+
+Proprietary - Povaly Inc.
+
+---
+
+## 🎉 Getting Started
+
+1. Read the [Topic Guides](./docs/TOPIC_GUIDES.md)
+2. Run `/help` in bot for quick reference
+3. Run `/commands` to see all available commands
+4. Start creating tasks with `/newtask`
+
+**Happy automating!** 🚀

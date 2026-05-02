@@ -65,7 +65,13 @@ def build_mytasks_message(context, tasks_by_state, total_tasks, chat_id, user_id
                 else:
                     link = f"https://t.me/c/{group_id}/{task.message_id}"
                 
-                message += f"  • <a href='{link}'>#{task.ticket}</a> - {task.brand}\n"
+                # Check if task has blocking tasks (simplified - no await needed)
+                # We'll show blocked indicator if task has blocking_tasks attribute set
+                blocked_indicator = ""
+                if hasattr(task, 'blocking_tasks') and task.blocking_tasks:
+                    blocked_indicator = " 🚫"
+                
+                message += f"  • <a href='{link}'>#{task.ticket}</a> - {task.brand}{blocked_indicator}\n"
             
             # Add "Show more" button if there are more tasks
             if len(tasks) > page_size and state not in expanded_states:

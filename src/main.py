@@ -113,6 +113,12 @@ async def main() -> None:
             await report_service.start()
             logger.info("Report service started")
         
+        # Start deadline reminder service
+        deadline_reminder_service = application.bot_data.get("deadline_reminder_service")
+        if deadline_reminder_service:
+            await deadline_reminder_service.start()
+            logger.info("Deadline reminder service started")
+        
         print("✅ All services started", flush=True)
         print("🤖 Bot is now polling for messages...", flush=True)
         
@@ -190,6 +196,12 @@ async def main() -> None:
         if report_service:
             await report_service.stop()
             logger.info("Report service stopped")
+        
+        # Stop deadline reminder service
+        deadline_reminder_service = application.bot_data.get("deadline_reminder_service")
+        if deadline_reminder_service:
+            await deadline_reminder_service.stop()
+            logger.info("Deadline reminder service stopped")
         
         await application.updater.stop()
         await application.stop()

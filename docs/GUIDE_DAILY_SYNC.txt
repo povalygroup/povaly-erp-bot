@@ -1,0 +1,123 @@
+📊 DAILY SYNC GUIDE — TEAM REPORTING & UPDATES
+
+🎯 PURPOSE: Daily team synchronization. Share progress, blockers, and updates.
+
+📝 DAILY UPDATE FORMAT
+
+[DATE] YYYY-MM-DD
+[NAME] @username
+[COMPLETED] What you finished today
+[IN_PROGRESS] What you're working on
+[BLOCKERS] Any issues blocking progress
+[TOMORROW] What you plan to do tomorrow
+
+Example:
+[DATE] 2026-04-28
+[NAME] @john.doe
+[COMPLETED] Completed POV260501 (homepage banner)
+[IN_PROGRESS] Working on POV260502 (product page)
+[BLOCKERS] Waiting for design approval from @designer
+[TOMORROW] Start POV260503 (email template)
+
+🤖 AUTOMATIC DAILY SUMMARY
+
+Bot generates daily summary at 6 PM:
+
+📊 DAILY SYNC SUMMARY - 2026-04-28
+
+COMPLETED TODAY:
+✅ POV260501 (Homepage banner) - @john.doe
+✅ VRB260502 (Product page) - @jane.smith
+
+IN PROGRESS:
+🔄 POV260504 (Blog redesign) - @john.doe
+
+BLOCKERS:
+⚠️ POV260506 - Waiting for design approval
+
+TEAM STATS:
+• Tasks completed: 3
+• Tasks in progress: 5
+• Blockers: 2
+• Team members reporting: 8/10
+
+⏰ TIMING
+
+Post updates:
+• End of work day (before 6 PM)
+• Or start of next day (before 10 AM)
+
+Summary generated: 6 PM daily (pinned)
+
+⚡ COMMANDS
+
+/dailyupdate - Post guided update
+/todaysync - View today's summary
+/syncsummary YYYY-MM-DD - View specific date
+/myblockers - View your blockers
+/teamblockers - View all blockers (managers)
+/syncstats - View statistics
+
+👷 FOR EMPLOYEES
+
+WORKFLOW:
+1. Track work throughout day
+2. Note blockers as they arise
+3. Plan tomorrow's work
+4. Post daily update (end of day)
+5. Use /dailyupdate for guided form
+6. Check /todaysync for team progress
+7. Help teammates if possible
+
+⚠️ Important:
+• Post consistently
+• Be honest about blockers
+• Include ticket numbers
+• Mention who can help
+• Plan ahead
+
+👑 FOR MANAGERS
+
+WORKFLOW:
+1. Check /todaysync each morning
+2. Review team progress
+3. Identify blockers
+4. Use /teamblockers for all issues
+5. Reach out to blocked employees
+6. Provide resources
+7. Use /syncstats for metrics
+
+⚠️ Important:
+• Review syncs daily
+• Act on blockers quickly
+• Support your team
+• Celebrate wins
+• Use data for planning
+
+🔄 BLOCKER RESOLUTION
+
+When blocker reported:
+1. Manager identifies blocker
+2. Determines who can help
+3. Coordinates resolution
+4. Follows up with employee
+5. Confirms blocker resolved
+
+⚠️ TOPIC RULES
+
+✓ DO: Post updates, report blockers, use format, help teammates
+✗ DON'T: Post non-updates, skip blockers, modify format, casual chat
+
+🚫 WHAT DOESN'T BELONG HERE
+
+❌ Task assignment → Task Allocation
+❌ Issue reporting → Core Operations
+❌ QA submissions → QA Review
+❌ Casual chat → Team Lounge
+
+❓ NEED HELP?
+
+Unsure format? → Use /dailyupdate command
+Have blocker? → Include in [BLOCKERS]
+Need help? → Mention who can assist
+See team progress? → Use /todaysync command

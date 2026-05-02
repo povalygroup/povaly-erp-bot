@@ -1,0 +1,124 @@
+📢 OFFICIAL DIRECTIVES GUIDE — COMPANY ANNOUNCEMENTS
+
+🎯 PURPOSE: Official company announcements, policies, and directives from leadership.
+
+🔐 ACCESS CONTROL
+👑 Authorized Posters: Chairman, CEO, Managers, Owners
+👤 All Employees: Can read and acknowledge
+🚫 Employees CANNOT post messages
+
+📝 ANNOUNCEMENT FORMAT
+
+[DIRECTIVE] Policy/Announcement title
+[EFFECTIVE_DATE] YYYY-MM-DD
+[PRIORITY] LOW / MEDIUM / HIGH / CRITICAL
+[CONTENT] Full announcement text
+[ACTION_REQUIRED] Yes/No
+[DEADLINE] YYYY-MM-DD (if action required)
+
+Example:
+[DIRECTIVE] New Work From Home Policy
+[EFFECTIVE_DATE] 2026-05-01
+[PRIORITY] HIGH
+[CONTENT] Effective May 1st, employees can work from home 2 days per week...
+[ACTION_REQUIRED] Yes
+[DEADLINE] 2026-04-30
+
+🔄 ACKNOWLEDGMENT SYSTEM
+
+Employees acknowledge by reacting:
+
+👍 = ACKNOWLEDGED (I read and understand)
+❤️ = ACKNOWLEDGED & AGREED (I agree)
+👎 = ACKNOWLEDGED & DISAGREE (I read but disagree)
+
+🤖 AUTOMATION LOGIC
+
+On announcement posted:
+→ Bot pins message automatically
+→ Sends notification to all employees
+→ Tracks acknowledgment status
+
+On 👍 reaction:
+→ Mark as acknowledged
+→ Store timestamp
+→ Send DM confirmation
+
+On ❤️ reaction:
+→ Mark as acknowledged & agreed
+→ Store timestamp
+→ Send DM confirmation
+
+On 👎 reaction:
+→ Mark as acknowledged & disagreed
+→ Store timestamp
+→ Alert admin: "User disagreed"
+
+⏰ ACKNOWLEDGMENT TRACKING
+
+/directiveack DIRECTIVE_ID
+Shows: ACKNOWLEDGED, AGREED, DISAGREED, NOT ACKNOWLEDGED
+
+/pendingack
+Shows all directives not yet acknowledged by you
+
+⚡ COMMANDS
+
+/directives - View all directives
+/directive #ID - View full details
+/myack - View your acknowledgments
+/postdirective - Post new directive (admin)
+
+👑 FOR LEADERSHIP/MANAGERS
+
+WORKFLOW:
+1. Compose directive
+2. Use /postdirective command
+3. Fill in all required fields
+4. Set priority and deadline
+5. Message auto-pinned
+6. Monitor acknowledgments
+7. Follow up on non-acknowledgers
+8. Track disagreements
+
+⚠️ Important:
+• Use clear language
+• Set realistic deadlines
+• Follow up on acknowledgments
+• Address disagreements
+• Document everything
+
+👷 FOR EMPLOYEES
+
+WORKFLOW:
+1. Read announcements regularly
+2. Understand content
+3. React to acknowledge
+4. Take action if required
+5. Complete by deadline
+6. Ask questions in Core Operations
+
+⚠️ Important:
+• Read all announcements
+• Acknowledge within 24 hours
+• Follow all directives
+• Ask questions appropriately
+• Do NOT post in this topic
+
+⚠️ TOPIC RULES
+
+✓ DO: Post official announcements, use format, set deadlines, track acks
+✗ DON'T: Post non-official messages, skip fields, allow employee posts
+
+🚫 WHAT DOESN'T BELONG HERE
+
+❌ Task assignment → Task Allocation
+❌ Issue reporting → Core Operations
+❌ QA submissions → QA Review
+❌ Casual chat → Team Lounge
+
+❓ NEED HELP?
+
+Unclear directive? → Ask in Core Operations
+Need to post? → Use /postdirective command
+Check acknowledgments? → Use /directiveack command

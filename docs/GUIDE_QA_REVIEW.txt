@@ -1,0 +1,111 @@
+📋 QA REVIEW GUIDE — QUALITY ASSURANCE WORKFLOW
+
+🎯 PURPOSE: Submit completed work for QA approval before marking as complete.
+
+📝 SUBMISSION FORMAT
+
+[TICKET] POV260501
+[TASK] Task title
+[ASSIGNEE] @username
+[SUBMISSION_LINK] Google Drive / GitHub / URL
+[NOTES] Additional notes (optional)
+
+Required: [TICKET], [SUBMISSION_LINK]
+
+🔄 REACTION-BASED QA SYSTEM
+
+❤️ = APPROVED (QA reviewer approves)
+👎 = REJECTED (QA reviewer rejects)
+👍 = REVIEW STARTED (QA reviewer begins review)
+
+🤖 AUTOMATION LOGIC
+
+On 👍 (Review Started):
+→ Mark as UNDER_REVIEW
+→ Send DM to submitter
+
+On ❤️ (Approved):
+→ Mark as APPROVED
+→ Mark task as COMPLETED
+→ Archive to Central Archive
+→ Send approval DM
+
+On 👎 (Rejected):
+→ Mark as REJECTED
+→ Send rejection DM with reason
+→ Task returns to ASSIGNED state
+
+⏱️ QA ESCALATION (AUTOMATIC)
+
+If submission not reviewed within 4 hours:
+→ Alert sent to Admin Control Panel
+→ Shows submitter and link
+→ Escalates to admin
+
+⏰ AUTO REMINDER
+
+If under review but not approved within 2 hours:
+→ Reminder DM to QA reviewer
+→ Repeats every 1 hour
+
+⚡ COMMANDS
+
+/submitqa TICKET LINK - Quick submit
+/mysubmissions - View your submissions
+/pendingqa - View pending (QA only)
+/qa #TICKET - View full details
+/approveqa #TICKET - Approve submission
+/rejectqa #TICKET REASON - Reject submission
+/qahelp - Quick reference
+
+👷 FOR EMPLOYEES
+
+WORKFLOW:
+1. Complete task in Task Allocation
+2. React 👍 to mark started
+3. Prepare deliverables
+4. Post submission in QA Review
+5. Wait for review (get DM when started)
+6. If ❤️: Task complete! ✅
+7. If 👎: Fix issues, resubmit
+
+⚠️ Important:
+• Submit only when 100% complete
+• Include all deliverables
+• Provide clear submission link
+• Add helpful notes
+• Check DMs for status
+
+👑 FOR QA REVIEWERS
+
+WORKFLOW:
+1. Check /pendingqa for submissions
+2. Review oldest first
+3. React 👍 to mark review started
+4. Check deliverables vs requirements
+5. React ❤️ to approve OR 👎 to reject
+6. If rejecting, reply with reason
+
+⚠️ Important:
+• Review within 2 hours
+• Provide rejection reason
+• Be clear about requirements
+• Approve only if 100% meets specs
+
+⚠️ TOPIC RULES
+
+✓ DO: Post QA submissions, use format, include link
+✗ DON'T: Post non-submissions, skip fields, post incomplete work
+
+🚫 WHAT DOESN'T BELONG HERE
+
+❌ Task assignment → Task Allocation
+❌ Issue reporting → Core Operations
+❌ Completed work → Central Archive
+❌ Casual chat → Team Lounge
+
+❓ NEED HELP?
+
+Rejected? → Check DM for reason, fix, resubmit
+Unsure format? → Use /submitqa command
+QA questions? → Ask in Core Operations

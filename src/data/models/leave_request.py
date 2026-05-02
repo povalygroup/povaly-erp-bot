@@ -3,7 +3,8 @@
 from dataclasses import dataclass
 from datetime import date, datetime
 from enum import Enum
-from typing import Optional
+from typing import Optional, List
+import json
 
 
 class LeaveStatus(str, Enum):
@@ -28,6 +29,9 @@ class LeaveRequest:
     message_id: int
     reviewed_by: Optional[int] = None
     reviewed_at: Optional[datetime] = None
+    replacement_user_id: Optional[int] = None  # Who handles tasks during leave
+    task_handover_ids: Optional[List[str]] = None  # Which tasks to reassign
+    is_notified: bool = False  # Whether replacement was notified
     
     def to_dict(self) -> dict:
         """Convert leave request to dictionary."""
@@ -42,11 +46,21 @@ class LeaveRequest:
             "message_id": self.message_id,
             "reviewed_by": self.reviewed_by,
             "reviewed_at": self.reviewed_at.isoformat() if self.reviewed_at else None,
+            "replacement_user_id": self.replacement_user_id,
+            "task_handover_ids": json.dumps(self.task_handover_ids) if self.task_handover_ids else None,
+            "is_notified": self.is_notified,
         }
     
     @classmethod
     def from_dict(cls, data: dict) -> "LeaveRequest":
         """Create leave request from dictionary."""
+        task_handover_ids = None
+        if data.get("task_handover_ids"):
+            try:
+                task_handover_ids = json.loads(data["task_handover_ids"])
+            except:
+                task_handover_ids = None
+        
         return cls(
             id=data.get("id"),
             user_id=data["user_id"],
@@ -58,4 +72,7 @@ class LeaveRequest:
             message_id=data["message_id"],
             reviewed_by=data.get("reviewed_by"),
             reviewed_at=datetime.fromisoformat(data["reviewed_at"]) if data.get("reviewed_at") else None,
+            replacement_user_id=data.get("replacement_user_id"),
+            task_handover_ids=task_handover_ids,
+            is_notified=data.get("is_notified", False),
         )
