@@ -944,10 +944,14 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
     # Process removed reactions
     logger.info(f"🔍 Starting to process {len(removed_reactions)} removed reactions: {removed_reactions}")
     for emoji in removed_reactions:
+        logger.info(f"🔍 Processing removed emoji: {emoji} (repr: {repr(emoji)})")
         try:
             if emoji == "👍":
                 # Check if ❤️ or 👎 was ADDED in the same update
                 # If yes, this is just Telegram replacing 👍 with ❤️/👎, not an actual unclaim
+                logger.info(f"🔍 Checking if ❤️ or 👎 in added_reactions: {added_reactions}")
+                logger.info(f"🔍 '❤️' in added_reactions: {'❤️' in added_reactions}")
+                logger.info(f"🔍 '👎' in added_reactions: {'👎' in added_reactions}")
                 if "❤️" in added_reactions or "👎" in added_reactions:
                     logger.info(f"👍 removed but ❤️/👎 added in same update - skipping unclaim notification (this is approval/rejection)")
                     continue
