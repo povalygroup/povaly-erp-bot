@@ -184,6 +184,45 @@ class IssueService:
             logger.error(f"Error resolving issue {issue_ticket}: {e}")
             return False
     
+    async def unresolve_issue(self, issue_ticket: str) -> bool:
+        """
+        Unresolve an issue (❤️ reaction removed).
+        
+        Args:
+            issue_ticket: Issue ticket ID (e.g., POV260404-I1)
+            
+        Returns:
+            True if successfully unresolved
+        """
+        try:
+            issue = await self.repository.get_issue_by_issue_ticket(issue_ticket)
+            if not issue:
+                logger.warning(f"Issue {issue_ticket} not found for unresolve")
+                return False
+            
+            if issue.status != IssueStatus.RESOLVED:
+                logger.warning(f"Issue {issue_ticket} is not resolved (status: {issue.status})")
+                return False
+            
+            # Revert to IN_PROGRESS if there are claims, otherwise OPEN
+            if issue.claimed_by:
+                issue.status = IssueStatus.IN_PROGRESS
+            else:
+                issue.status = IssueStatus.OPEN
+            issue.resolved_by = None
+            issue.resolved_at = None
+            
+            success = await self.repository.update_issue(issue)
+            if success:
+                logger.info(f"Issue {issue_ticket} unresolved (reverted to {issue.status.value})")
+                return True
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error unresolving issue {issue_ticket}: {e}")
+            return False
+    
     async def reject_issue(self, issue_ticket: str, user_id: int) -> bool:
         """
         Reject an issue as invalid (👎 reaction).
@@ -339,3 +378,41 @@ class IssueService:
             summary += f"📅 Created: {issue.created_at.strftime('%Y-%m-%d %H:%M')}\n"
         
         return summary.strip()
+
+    async def unreject_issue(self, issue_ticket: str) -> bool:
+        """
+        Unreject an issue (👎 reaction removed).
+        
+        Args:
+            issue_ticket: Issue ticket ID (e.g., POV260404-I1)
+            
+        Returns:
+            True if successfully unrejected
+        """
+        try:
+            issue = await self.repository.get_issue_by_issue_ticket(issue_ticket)
+            if not issue:
+                logger.warning(f"Issue {issue_ticket} not found for unreject")
+                return False
+            
+            if issue.status != IssueStatus.INVALID:
+                logger.warning(f"Issue {issue_ticket} is not rejected (status: {issue.status})")
+                return False
+            
+            # Revert to IN_PROGRESS if there are claims, otherwise OPEN
+            if issue.claimed_by:
+                issue.status = IssueStatus.IN_PROGRESS
+            else:
+                issue.status = IssueStatus.OPEN
+            issue.rejected_by = None
+            
+            success = await self.repository.update_issue(issue)
+            if success:
+                logger.info(f"Issue {issue_ticket} unrejected (reverted to {issue.status.value})")
+                return True
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error unrejecting issue {issue_ticket}: {e}")
+            return False

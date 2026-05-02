@@ -710,6 +710,29 @@ An issue on your task **#{issue.ticket}** has been claimed by {claimer_username}
                             )
                         except Exception as e:
                             logger.warning(f"Failed to send unclaim notification: {e}")
+            
+            elif emoji == "❤️" or emoji == "❤":
+                # Check if 👍 was ADDED in the same update (user changing from ❤️ to 👍)
+                if "👍" in added_reactions:
+                    logger.info(f"❤️ removed but 👍 added in same update - reverting to claimed state")
+                    # The 👍 added reaction will handle setting it back to IN_PROGRESS
+                    continue
+                
+                # Unresolve issue (revert to previous state)
+                success = await issue_service.unresolve_issue(issue.issue_ticket)
+                if success:
+                    logger.info(f"↩️ Issue {issue.issue_ticket} unresolved (❤️ removed)")
+            
+            elif emoji == "👎":
+                # Check if 👍 was ADDED in the same update
+                if "👍" in added_reactions:
+                    logger.info(f"👎 removed but 👍 added in same update - reverting to claimed state")
+                    continue
+                
+                # Unreject issue (revert to previous state)
+                success = await issue_service.unreject_issue(issue.issue_ticket)
+                if success:
+                    logger.info(f"↩️ Issue {issue.issue_ticket} unrejected (👎 removed)")
         
         except Exception as e:
             logger.error(f"Error removing {emoji} reaction from issue {issue.ticket}: {e}", exc_info=True)
