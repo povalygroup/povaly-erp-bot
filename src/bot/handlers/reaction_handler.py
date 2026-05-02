@@ -941,19 +941,22 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
                 # Check if ❤️ or 👎 was ADDED in the same update
                 # If yes, this is just Telegram replacing 👍 with ❤️/👎, not an actual unclaim
                 if "❤️" in added_reactions or "👎" in added_reactions:
-                    logger.debug(f"👍 removed but ❤️/👎 added - this is approval/rejection, not unclaim")
+                    logger.info(f"👍 removed but ❤️/👎 added in same update - skipping unclaim notification (this is approval/rejection)")
                     continue
                 
                 # Fetch latest QA status (might have been updated by added reactions)
                 latest_qa = await qa_repo.get_submission_by_message_id(qa_submission.message_id)
                 if not latest_qa:
+                    logger.warning(f"Could not fetch latest QA for message {qa_submission.message_id}")
                     continue
+                
+                logger.info(f"👍 removed from QA {latest_qa.ticket} - current status: {latest_qa.status}")
                 
                 # Only send unclaim notification if QA is still PENDING
                 # Don't send if already approved/rejected
                 if latest_qa.status == QAStatus.PENDING:
                     # Remove reviewer claim
-                    logger.info(f"↩️ User {user_id} unclaimed QA {latest_qa.ticket}")
+                    logger.info(f"↩️ User {user_id} unclaimed QA {latest_qa.ticket} - sending unclaim notification")
                     
                     # Send notification to submitter
                     try:
@@ -962,10 +965,11 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
                             text=f"↩️ **QA Review Unclaimed**\n\nQA submission for task **#{latest_qa.ticket}** is no longer being reviewed.\n\nWaiting for another reviewer to claim it.",
                             parse_mode='Markdown'
                         )
+                        logger.info(f"Sent unclaim notification to submitter {latest_qa.submitter_id}")
                     except Exception as e:
                         logger.warning(f"Failed to send unclaim notification: {e}")
                 else:
-                    logger.debug(f"Ignoring 👍 removal on QA {latest_qa.ticket} - already {latest_qa.status}")
+                    logger.info(f"Ignoring 👍 removal on QA {latest_qa.ticket} - status is {latest_qa.status}, not PENDING")
             
             elif emoji == "❤️":
                 # DO NOT revert approval when ❤️ is removed
