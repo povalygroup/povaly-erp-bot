@@ -341,6 +341,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ============================================
     # TOPIC PROTECTION: Prevent unauthorized access to restricted topics
     # ============================================
+    
+    # Define who has admin-level access (can post anywhere)
+    admin_users = config.ADMINISTRATORS + config.MANAGERS + config.OWNERS
+    is_admin = user_id in admin_users
+    
     restricted_topics = {
         config.TOPIC_OFFICIAL_DIRECTIVES: {
             'name': 'Official Directives',
@@ -349,23 +354,23 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         },
         config.TOPIC_CENTRAL_ARCHIVE: {
             'name': 'Central Archive',
-            'allowed': [],  # Bot only - no humans
-            'reason': 'This is an archive topic. Only the bot can post here.'
+            'allowed': admin_users,  # Admins/Managers/Owners can post
+            'reason': 'This is an archive topic. Only authorized personnel can post here.'
         },
         config.TOPIC_DAILY_SYNC: {
             'name': 'Daily Sync',
-            'allowed': [],  # Bot only - no humans
-            'reason': 'This is a reports topic. Only the bot can post here.'
+            'allowed': admin_users,  # Admins/Managers/Owners can post
+            'reason': 'This is a reports topic. Only authorized personnel can post here.'
         },
         config.TOPIC_ADMIN_CONTROL_PANEL: {
             'name': 'Admin Control Panel',
-            'allowed': config.ADMINISTRATORS + config.MANAGERS + config.OWNERS,
+            'allowed': admin_users,  # Admins/Managers/Owners can post
             'reason': 'Only Administrators, Managers, and Owners can access the Admin Control Panel.'
         },
         config.TOPIC_TRASH: {
             'name': 'Trash',
-            'allowed': [],  # Bot only - no humans
-            'reason': 'This is a trash topic. Only the bot can move messages here.'
+            'allowed': admin_users,  # Admins/Managers/Owners can post
+            'reason': 'This is a trash topic. Only authorized personnel can post here.'
         },
     }
     
