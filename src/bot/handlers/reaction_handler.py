@@ -646,9 +646,11 @@ An issue on your task **#{issue.ticket}** has been claimed by {claimer_username}
                         except Exception as e:
                             logger.warning(f"Failed to send claim notification to assignee: {e}")
             
-            elif emoji == "❤️":
+            elif emoji == "❤️" or emoji == "❤":
                 # Resolve issue (works anytime)
+                logger.info(f"🔍 Processing ❤️ reaction for issue {issue.issue_ticket}")
                 success = await issue_service.resolve_issue(issue.issue_ticket, user_id)
+                logger.info(f"🔍 resolve_issue returned: {success}")
                 if success:
                     logger.info(f"❤️ User {user_id} resolved issue {issue.issue_ticket}")
                     
@@ -664,6 +666,8 @@ An issue on your task **#{issue.ticket}** has been claimed by {claimer_username}
                         logger.info(f"Sent resolution notification to user {issue.creator_id}")
                     except Exception as e:
                         logger.warning(f"Failed to send resolution notification: {e}")
+                else:
+                    logger.warning(f"❌ Failed to resolve issue {issue.issue_ticket}")
             
             elif emoji == "👎":
                 # Reject issue as invalid

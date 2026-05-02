@@ -124,14 +124,14 @@ class IssueService:
                     logger.info(f"User {user_id} claimed issue {issue_ticket}")
                     return True
             else:
-                # User already claimed, just update status
+                # User already claimed - ensure status is IN_PROGRESS and update
                 if user_id in issue.claimed_by:
                     if issue.status != IssueStatus.IN_PROGRESS:
                         issue.status = IssueStatus.IN_PROGRESS
-                        success = await self.repository.update_issue(issue)
-                        if success:
-                            logger.info(f"User {user_id} re-claimed issue {issue_ticket} (status updated to IN_PROGRESS)")
-                            return True
+                    success = await self.repository.update_issue(issue)
+                    if success:
+                        logger.info(f"User {user_id} re-claimed issue {issue_ticket} (ensured IN_PROGRESS status)")
+                        return True
             
             return False
             
