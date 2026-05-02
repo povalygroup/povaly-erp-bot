@@ -3603,8 +3603,6 @@ async def send_priority_selection_to_core_ops(update: Update, context: ContextTy
             asyncio.create_task(delete_dm())
         except Exception as e:
             logger.error(f"Failed to send DM to user {user_id}: {e}")
-            warning_text=True
-        )
         
     except Exception as e:
         logger.error(f"Error sending priority selection to Core Operations: {e}", exc_info=True)
