@@ -24,6 +24,18 @@ class BrandMapper:
         # Povaly variations
         "povaly": "POV",
         "pov": "POV",  # Direct code
+        # BWC News variations
+        "bwc news": "BWN",
+        "bwcnews": "BWN",
+        "bwc-news": "BWN",
+        "bwn": "BWN",  # Direct code
+        # BWC Sportz variations
+        "bwc sportz": "BWS",
+        "bwcsportz": "BWS",
+        "bwc-sportz": "BWS",
+        "bwc sports": "BWS",
+        "bwcsports": "BWS",
+        "bws": "BWS",  # Direct code
     }
     
     # Display names for each brand code (for showing in /brand command)
@@ -31,6 +43,8 @@ class BrandMapper:
         "VRB": "VorosaBajar",
         "GSM": "GSMAura",
         "POV": "Povaly",
+        "BWN": "BWC News",
+        "BWS": "BWC Sportz",
     }
     
     def __init__(self, custom_mappings: Optional[Dict[str, str]] = None):

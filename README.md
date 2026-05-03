@@ -393,11 +393,10 @@ Povaly ERP Bot is a production-ready, multi-functional Telegram automation syste
 
 **Supported Brands:**
 - POV (Povaly)
+- VRB (VorosaBajar)
 - GSM (GSMAura)
-- BRD (Brand)
-- MKT (Marketing)
-- DEV (Development)
-- QA (Quality Assurance)
+- BWN (BWC News)
+- BWS (BWC Sportz)
 - Custom brands via configuration
 
 ---
@@ -784,7 +783,7 @@ TOPIC_STRATEGIC_LOUNGE=11
 TOPIC_TRASH=12
 
 # Brand Codes
-BRAND_CODES=POV,BRD,MKT,DEV,QA
+BRAND_CODES=POV,VRB,GSM,BWN,BWS
 
 # Timezone
 TIMEZONE=GMT+6
