@@ -4118,6 +4118,20 @@ async def cmd_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message += "  👎 - I cannot attend\n"
     message += "  🔥 - I have an urgent conflict\n\n"
     
+    # ===== BIRTHDAY & EMPLOYEE INFO COMMANDS =====
+    message += "**🎂 BIRTHDAY & EMPLOYEE INFO**\n"
+    message += "`/updateinfo` - Update your employee information\n"
+    message += "`/myinfo` - View your employee information\n"
+    message += "`/mybirthday` - View your birthday information\n"
+    message += "`/skip` - Skip your birthday celebration this year\n"
+    if is_privileged:
+        message += "`/setinfo @user` - Set employee info for user (Admin)\n"
+        message += "`/viewinfo @user` - View employee info (Admin)\n"
+        message += "`/birthday @user [message]` - Send custom birthday wish (Admin)\n"
+        message += "`/birthdays` - View all upcoming birthdays (Admin)\n"
+        message += "`/birthdaytoday` - View today's birthdays (Admin)\n"
+    message += "\n"
+    
     # ===== TASK ROUTING & ASSIGNMENT (Privileged) =====
     if is_privileged:
         message += "**🎯 TASK ROUTING & ASSIGNMENT** (Admin/Manager/Owner)\n"
