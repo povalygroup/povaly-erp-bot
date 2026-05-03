@@ -29,6 +29,8 @@ async def migrate_up(db):
                 logger.info(f"Column already exists, skipping: {column_name}")
         
         # Add employee information columns to users table
+        await add_column_if_not_exists("first_name", "TEXT")
+        await add_column_if_not_exists("last_name", "TEXT")
         await add_column_if_not_exists("full_name", "TEXT")
         await add_column_if_not_exists("email", "TEXT")
         await add_column_if_not_exists("phone", "TEXT")
