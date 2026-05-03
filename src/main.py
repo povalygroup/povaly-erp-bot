@@ -125,6 +125,15 @@ async def main() -> None:
             await meeting_reminder_service.start()
             logger.info("Meeting reminder service started")
         
+        # Start birthday service (wishes and reminders)
+        birthday_service = application.bot_data.get("birthday_service")
+        if birthday_service and config.FEATURE_BIRTHDAY_WISHES:
+            # Create birthday scheduler
+            from src.services.birthday_scheduler import BirthdayScheduler
+            birthday_scheduler = BirthdayScheduler(birthday_service, config, application)
+            await birthday_scheduler.start()
+            logger.info("Birthday service started (wishes + reminders)")
+        
         print("✅ All services started", flush=True)
         print("🤖 Bot is now polling for messages...", flush=True)
         

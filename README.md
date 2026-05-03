@@ -33,6 +33,7 @@ Povaly ERP Bot is a production-ready, multi-functional Telegram automation syste
 - **🐛 Issue Tracking** - Report, claim, resolve issues with priority-based escalation
 - **⏰ Attendance System** - Auto check-in, break tracking, leave management with task handover
 - **📅 Meeting Coordination** - Schedule meetings, track RSVPs, manage action items
+- **🎂 Birthday Celebrations** - Auto wishes, employee info collection, birthday reminders
 - **📊 Automated Reporting** - Daily summaries, performance metrics, team analytics
 - **🔐 Security & Compliance** - Role-based access, audit trails, violation detection
 - **🔄 Smart Reactions** - Emoji-based workflows with reversal support
@@ -40,11 +41,12 @@ Povaly ERP Bot is a production-ready, multi-functional Telegram automation syste
 ### Project Status
 
 **Version:** 1.0.0 (Production Ready)  
-**Commands:** 80+ commands across all modules  
-**Services:** 20+ background services  
-**Database Tables:** 21 tables with full relationships  
+**Commands:** 89+ commands across all modules  
+**Services:** 23+ background services  
+**Database Tables:** 23 tables with full relationships  
 **Topics:** 12 specialized topics with dedicated guides  
-**Reaction System:** Full emoji-based workflow with smart detection
+**Reaction System:** Full emoji-based workflow with smart detection  
+**Birthday System:** Auto wishes, reminders, and employee info collection
 
 ---
 
@@ -233,6 +235,66 @@ Povaly ERP Bot is a production-ready, multi-functional Telegram automation syste
 - `/postmeeting` - Post meeting notes
 - `/cancelmeeting` - Cancel a meeting
 
+### 🎂 Birthday & Employee Information System
+
+**Employee Information Collection:**
+- ✅ Structured employee info collection via formatted messages
+- ✅ First-time user welcome with info request
+- ✅ 12 employee fields: NAME, BIRTHDAY, EMAIL, PHONE, DEPARTMENT, POSITION, JOIN_DATE, EMERGENCY_CONTACT, BLOOD_GROUP, ADDRESS, SKILLS, NOTES
+- ✅ Validation for email, phone, blood group, date formats
+- ✅ Update employee info anytime with `/updateinfo`
+- ✅ View employee info with `/myinfo` and `/viewinfo`
+
+**Birthday Celebration System:**
+- ✅ Automatic birthday wishes at 9:00 AM daily
+- ✅ Birthday wishes sent to user DM + Official Directives topic
+- ✅ Custom birthday messages from admins (overrides auto wishes)
+- ✅ Birthday reminders 1 day before (6:00 PM)
+- ✅ 3-channel reminders: user DM, admin DM, Admin Control Panel
+- ✅ Multiple birthdays on same day supported
+- ✅ Age display optional (DD-MM-YYYY shows age, DD-MM hides age)
+- ✅ Skip birthday celebration with `/skip` command
+
+**Birthday Format:**
+- DD-MM-YYYY (e.g., 15-05-1990) - Shows age in wishes
+- DD-MM (e.g., 15-05) - Hides age in wishes
+
+**Employee Info Format:**
+```
+[EMPLOYEE_INFO]
+[NAME] John Doe
+[BIRTHDAY] 15-05-1990
+[EMAIL] john@example.com
+[PHONE] +1234567890
+[DEPARTMENT] Engineering
+[POSITION] Senior Developer
+[JOIN_DATE] 01-01-2020
+[EMERGENCY_CONTACT] Jane Doe: +0987654321
+[BLOOD_GROUP] O+
+[ADDRESS] 123 Main St, City
+[SKILLS] Python, JavaScript, React
+[NOTES] Team lead for backend
+```
+
+**Birthday Commands:**
+- `/updateinfo` - Update your employee information
+- `/myinfo` - View your employee information
+- `/mybirthday` - View your birthday info
+- `/skip` - Skip your birthday celebration this year
+- `/setinfo @user` - Set employee info for user (admin)
+- `/viewinfo @user` - View employee info (admin)
+- `/birthday @user` - Send custom birthday wish (admin)
+- `/birthdays` - View all upcoming birthdays (admin)
+- `/birthdaytoday` - View today's birthdays (admin)
+
+**Birthday Features:**
+- Auto wishes logged in database (prevents duplicates)
+- Reminders logged in database
+- Configurable wish and reminder messages
+- Enable/disable wishes and reminders via config
+- Admin DM recipients configurable
+- Birthday wishes use employee's full name (not Telegram username)
+
 ### 📊 Automated Reporting
 
 **Daily Reports:**
@@ -253,6 +315,7 @@ Povaly ERP Bot is a production-ready, multi-functional Telegram automation syste
 - ✅ QA escalation alerts (4 hours pending)
 - ✅ Issue escalation alerts (2 hours unclaimed)
 - ✅ Meeting reminders (24h, 1h, 15m before)
+- ✅ Birthday reminders (1 day before at 6:00 PM)
 - ✅ Admin control panel alerts
 
 ### 🔐 Security & Access Control
@@ -369,13 +432,16 @@ povaly-erp-bot/
 │   │   └── state/                    # State management
 │   │       └── state_engine.py       # Task state machine
 │   │
-│   ├── services/                     # Service Layer (20+ services)
+│   ├── services/                     # Service Layer (23+ services)
 │   │   ├── task_service.py           # Task management
 │   │   ├── qa_service.py             # QA workflow
 │   │   ├── issue_service.py          # Issue tracking
 │   │   ├── attendance_service.py     # Attendance tracking
 │   │   ├── leave_request_service.py  # Leave management
 │   │   ├── meeting_service.py        # Meeting coordination
+│   │   ├── employee_info_service.py  # Employee info collection
+│   │   ├── birthday_service.py       # Birthday wishes and reminders
+│   │   ├── birthday_scheduler.py     # Birthday automation
 │   │   ├── archive_service.py        # Task archival
 │   │   ├── escalation_service.py     # Task escalation
 │   │   ├── qa_escalation_service.py  # QA escalation
@@ -406,9 +472,9 @@ povaly-erp-bot/
 │   │   │   ├── audit_trail.py        # Audit trail model
 │   │   │   ├── violation.py          # Violation model
 │   │   │   └── report.py             # Report model
-│   │   ├── repositories/             # Data repositories (12 repos)
+│   │   ├── repositories/             # Data repositories (14 repos)
 │   │   │   ├── task_repository.py
-│   │   │   ├── user_repository.py
+│   │   │   ├── user_repository.py    # Includes employee info methods
 │   │   │   ├── issue_repository.py
 │   │   │   ├── qa_repository.py
 │   │   │   ├── attendance_repository.py
@@ -418,7 +484,7 @@ povaly-erp-bot/
 │   │   │   ├── reaction_repository.py
 │   │   │   ├── task_assignee_repository.py
 │   │   │   └── base_repository.py
-│   │   └── migrations/               # Database migrations (10 migrations)
+│   │   └── migrations/               # Database migrations (11 migrations)
 │   │       ├── migration_001_comprehensive_redesign.py
 │   │       ├── migration_002_add_timestamp_to_reactions.py
 │   │       ├── migration_003_fix_task_reactions.py
@@ -428,7 +494,8 @@ povaly-erp-bot/
 │   │       ├── migration_007_add_admin_alerts.py
 │   │       ├── migration_008_add_task_dependencies.py
 │   │       ├── migration_009_add_meetings.py
-│   │       └── migration_010_add_task_deadline.py
+│   │       ├── migration_010_add_task_deadline.py
+│   │       └── migration_011_add_employee_info.py
 │   │
 │   ├── security/                     # Security Layer
 │   │   └── access_control.py         # Role-based access control
@@ -452,12 +519,15 @@ povaly-erp-bot/
 │       ├── telegram_bot.log          # Bot logs
 │       └── errors.log                # Error logs
 │
-├── docs/                             # Documentation (12 guides)
+├── docs/                             # Documentation (15 guides)
 │   ├── GUIDE_TASK_ALLOCATION.txt     # Task management guide
 │   ├── GUIDE_QA_REVIEW.txt           # QA workflow guide
 │   ├── GUIDE_CORE_OPERATIONS.txt     # Issue tracking guide
 │   ├── GUIDE_ATTENDANCE_LEAVE.txt    # Attendance guide
 │   ├── GUIDE_BOARDROOM.txt           # Meeting guide
+│   ├── GUIDE_BIRTHDAY_SYSTEM.md      # Birthday system user guide
+│   ├── GUIDE_BIRTHDAY_ADMIN.md       # Birthday admin guide
+│   ├── BIRTHDAY_QUICK_REFERENCE.md   # Birthday quick reference
 │   ├── GUIDE_ADMIN_CONTROL_PANEL.txt # Admin guide
 │   ├── GUIDE_BRAND_REPOSITORY.txt    # Brand assets guide
 │   ├── GUIDE_CENTRAL_ARCHIVE.txt     # Archive guide
@@ -755,6 +825,16 @@ DAILY_REPORT_TIME=22:30
 WEEKLY_REPORT_DAY=Sunday
 WEEKLY_REPORT_TIME=22:30
 DAILY_SUMMARY_TIME=00:00
+
+# Birthday System
+BIRTHDAY_WISHES_ENABLED=true
+BIRTHDAY_REMINDERS_ENABLED=true
+BIRTHDAY_WISH_TIME=09:00
+BIRTHDAY_REMINDER_TIME=18:00
+BIRTHDAY_WISH_MESSAGE=🎉 Happy Birthday {name}! 🎂\n\nWishing you a wonderful day filled with joy and happiness! 🎈
+BIRTHDAY_REMINDER_MESSAGE=📅 Reminder: Tomorrow is {name}'s birthday! 🎂
+ADMIN_DM_RECIPIENTS=123456789,987654321
+EMPLOYEE_INFO_WELCOME_MESSAGE=Welcome! Please share your employee information using the format shown in the guide.
 ```
 
 ---
@@ -890,6 +970,13 @@ DAILY_SUMMARY_TIME=00:00
 /mymeetings           # View your meetings
 /myactions            # View your action items
 
+# Birthday & Employee Info
+/updateinfo           # Update your employee info
+/myinfo               # View your employee info
+/mybirthday           # View your birthday info
+/birthdays            # View upcoming birthdays (admin)
+/birthdaytoday        # View today's birthdays (admin)
+
 # General
 /help                 # Show help
 /commands             # Show all commands
@@ -977,6 +1064,17 @@ DAILY_SUMMARY_TIME=00:00
 - `/cancelmeeting MTG-ID` - Cancel a meeting
 - `/meetinghelp` - Meeting coordination quick reference
 
+#### Birthday & Employee Info Commands (9)
+- `/updateinfo` - Update your employee information
+- `/myinfo` - View your employee information
+- `/mybirthday` - View your birthday information
+- `/skip` - Skip your birthday celebration this year
+- `/setinfo @user` - Set employee info for user (admin)
+- `/viewinfo @user` - View employee info for user (admin)
+- `/birthday @user [message]` - Send custom birthday wish (admin)
+- `/birthdays` - View all upcoming birthdays (admin)
+- `/birthdaytoday` - View today's birthdays (admin)
+
 #### Admin Commands (15+)
 - `/workload [@user]` - View workload statistics
 - `/assignto @user #TICKET` - Assign task to user
@@ -994,7 +1092,7 @@ DAILY_SUMMARY_TIME=00:00
 - `/alerts` - View admin alerts
 - `/adminhelp` - Admin commands quick reference
 
-#### General Commands (10+)
+#### General Commands (11+)
 - `/start` - Start bot and show welcome message
 - `/help` - Show help information
 - `/commands` - Show all available commands (role-filtered)
@@ -1004,6 +1102,7 @@ DAILY_SUMMARY_TIME=00:00
 - `/issuehelp` - Issue tracking guide
 - `/attendancehelp` - Attendance guide
 - `/meetinghelp` - Meeting guide
+- `/birthdayhelp` - Birthday system guide
 - `/adminhelp` - Admin commands guide
 
 ---
@@ -1172,6 +1271,9 @@ Each topic has a comprehensive guide document in the `docs/` folder:
 - `GUIDE_CORE_OPERATIONS.txt` - Issue tracking guide
 - `GUIDE_ATTENDANCE_LEAVE.txt` - Attendance and leave guide
 - `GUIDE_BOARDROOM.txt` - Meeting coordination guide
+- `GUIDE_BIRTHDAY_SYSTEM.md` - Birthday system user guide
+- `GUIDE_BIRTHDAY_ADMIN.md` - Birthday admin guide with troubleshooting
+- `BIRTHDAY_QUICK_REFERENCE.md` - Birthday quick reference card
 - `GUIDE_ADMIN_CONTROL_PANEL.txt` - Admin features guide
 - `GUIDE_BRAND_REPOSITORY.txt` - Brand assets guide
 - `GUIDE_CENTRAL_ARCHIVE.txt` - Archive guide
@@ -1351,10 +1453,10 @@ sudo systemctl restart povaly-bot
 
 ## 💾 Database
 
-### Database Schema (21 Tables)
+### Database Schema (23 Tables)
 
 **Core Tables:**
-1. **users** - User profiles and roles
+1. **users** - User profiles, roles, and employee information (27 new fields)
 2. **tasks** - Task records with state tracking
 3. **task_assignees** - Multiple assignees per task
 4. **task_dependencies** - Task blocking relationships
@@ -1367,14 +1469,16 @@ sudo systemctl restart povaly-bot
 11. **meetings** - Meeting records
 12. **meeting_attendees** - Meeting attendance tracking
 13. **action_items** - Meeting action items
-14. **admin_alerts** - Admin notification records
-15. **audit_trail** - Comprehensive audit log
-16. **violations** - Format violation records
-17. **reports** - Generated report records
-18. **reactions** - Global reaction tracking
-19. **user_expertise** - User skill tracking
-20. **brand_mapping** - Brand code mapping
-21. **system_config** - System configuration
+14. **birthday_wishes** - Birthday wish log (prevents duplicates)
+15. **birthday_reminders** - Birthday reminder log
+16. **admin_alerts** - Admin notification records
+17. **audit_trail** - Comprehensive audit log
+18. **violations** - Format violation records
+19. **reports** - Generated report records
+20. **reactions** - Global reaction tracking
+21. **user_expertise** - User skill tracking
+22. **brand_mapping** - Brand code mapping
+23. **system_config** - System configuration
 
 ### Database Operations
 
@@ -1460,6 +1564,7 @@ The bot automatically runs migrations on startup. Migrations are located in `src
 8. `migration_008_add_task_dependencies.py` - Task dependencies
 9. `migration_009_add_meetings.py` - Meeting system
 10. `migration_010_add_task_deadline.py` - Task deadlines
+11. `migration_011_add_employee_info.py` - Employee info and birthday system
 
 **Migration Status:**
 - Migrations run automatically on bot startup
@@ -1742,6 +1847,7 @@ cat data/logs/telegram_bot.log.2026-05-03
 - `/issuehelp` - Issue tracking guide
 - `/attendancehelp` - Attendance guide
 - `/meetinghelp` - Meeting guide
+- `/birthdayhelp` - Birthday system guide
 - `/adminhelp` - Admin commands guide
 
 **Documentation:**
@@ -1840,14 +1946,16 @@ This software is proprietary and confidential. Unauthorized copying, distributio
 - ✅ Attendance system with auto check-in
 - ✅ Leave management with task reassignment
 - ✅ Meeting coordination with RSVP and reminders
+- ✅ Birthday celebration system with auto wishes and reminders
+- ✅ Employee information collection (12 fields)
 - ✅ Automated reporting (daily, weekly)
 - ✅ Reaction-based workflows with smart detection
 - ✅ Role-based access control (5 roles)
 - ✅ 12 specialized topics with guides
-- ✅ 80+ commands
-- ✅ 20+ background services
-- ✅ 21 database tables
-- ✅ Comprehensive documentation
+- ✅ 89+ commands (9 new birthday commands)
+- ✅ 23+ background services (3 new birthday services)
+- ✅ 23 database tables (2 new birthday tables)
+- ✅ Comprehensive documentation (3 new birthday guides)
 
 **Technical Improvements:**
 - ✅ Reaction reversal system for all workflows

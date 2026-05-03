@@ -708,13 +708,30 @@ class SQLiteAdapter:
     async def insert_user(self, user: User):
         """Insert a new user."""
         await self.conn.execute("""
-            INSERT OR REPLACE INTO users VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT OR REPLACE INTO users (
+                user_id, username, first_name, last_name, full_name, email, phone,
+                department, position, join_date, emergency_contact, blood_group,
+                address, skills, notes, birth_date, birth_day, birth_month, birth_year,
+                birthday_wishes_sent, custom_birthday_message, birthday_reminder_sent,
+                role, created_at, last_active, is_on_leave, leave_start, leave_end,
+                info_set_by, info_updated_at, info_complete
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            user.user_id, user.username, user.full_name, user.role.value,
-            user.created_at.isoformat(), user.last_active.isoformat(),
+            user.user_id, user.username, user.first_name, user.last_name,
+            user.full_name, user.email, user.phone, user.department, user.position,
+            user.join_date, user.emergency_contact, user.blood_group, user.address,
+            user.skills, user.notes, user.birth_date, user.birth_day, user.birth_month,
+            user.birth_year, user.birthday_wishes_sent, user.custom_birthday_message,
+            user.birthday_reminder_sent,
+            user.role.value if isinstance(user.role, UserRole) else user.role,
+            user.created_at.isoformat() if user.created_at else datetime.now().isoformat(),
+            user.last_active.isoformat() if user.last_active else datetime.now().isoformat(),
             1 if user.is_on_leave else 0,
             user.leave_start.isoformat() if user.leave_start else None,
-            user.leave_end.isoformat() if user.leave_end else None
+            user.leave_end.isoformat() if user.leave_end else None,
+            user.info_set_by, 
+            user.info_updated_at.isoformat() if user.info_updated_at else None,
+            1 if user.info_complete else 0
         ))
         await self.conn.commit()
     
@@ -1116,6 +1133,202 @@ class SQLiteAdapter:
         async with self.conn.execute("SELECT * FROM users") as cursor:
             rows = await cursor.fetchall()
             return [User.from_dict(dict(row)) for row in rows]
+    
+    # Employee Information operations
+    async def update_employee_info(self, user_id: int, info_dict: dict, set_by: str = "self"):
+        """Update employee information for a user."""
+        fields = []
+        values = []
+        
+        # Map info_dict keys to database columns
+        field_mapping = {
+            "full_name": "full_name",
+            "email": "email",
+            "phone": "phone",
+            "department": "department",
+            "position": "position",
+            "join_date": "join_date",
+            "emergency_contact": "emergency_contact",
+            "blood_group": "blood_group",
+            "address": "address",
+            "skills": "skills",
+            "notes": "notes",
+            "birth_date": "birth_date",
+            "birth_day": "birth_day",
+            "birth_month": "birth_month",
+            "birth_year": "birth_year",
+        }
+        
+        for key, db_column in field_mapping.items():
+            if key in info_dict and info_dict[key] is not None:
+                fields.append(f"{db_column} = ?")
+                values.append(info_dict[key])
+        
+        # Add metadata
+        fields.append("info_set_by = ?")
+        values.append(set_by)
+        fields.append("info_updated_at = ?")
+        values.append(datetime.now().isoformat())
+        
+        # Check if info is complete (basic check - can be enhanced)
+        if info_dict.get("full_name") and info_dict.get("email") and info_dict.get("phone"):
+            fields.append("info_complete = ?")
+            values.append(1)
+        
+        values.append(user_id)
+        
+        query = f"UPDATE users SET {', '.join(fields)} WHERE user_id = ?"
+        await self.conn.execute(query, tuple(values))
+        await self.conn.commit()
+    
+    async def get_incomplete_profiles(self) -> List[User]:
+        """Get users with incomplete employee information."""
+        async with self.conn.execute(
+            "SELECT * FROM users WHERE info_complete = 0 OR info_complete IS NULL"
+        ) as cursor:
+            rows = await cursor.fetchall()
+            return [User.from_dict(dict(row)) for row in rows]
+    
+    # Birthday operations
+    async def update_birthday(self, user_id: int, birth_date: str, birth_day: int,
+                             birth_month: int, birth_year: Optional[int] = None):
+        """Update user's birthday information."""
+        await self.conn.execute("""
+            UPDATE users 
+            SET birth_date = ?, birth_day = ?, birth_month = ?, birth_year = ?
+            WHERE user_id = ?
+        """, (birth_date, birth_day, birth_month, birth_year, user_id))
+        await self.conn.commit()
+    
+    async def get_users_with_birthday_today(self) -> List[User]:
+        """Get all users with birthday today."""
+        today = date.today()
+        async with self.conn.execute("""
+            SELECT * FROM users 
+            WHERE birth_month = ? AND birth_day = ?
+        """, (today.month, today.day)) as cursor:
+            rows = await cursor.fetchall()
+            return [User.from_dict(dict(row)) for row in rows]
+    
+    async def get_users_with_birthday_tomorrow(self) -> List[User]:
+        """Get all users with birthday tomorrow."""
+        from datetime import timedelta
+        tomorrow = date.today() + timedelta(days=1)
+        async with self.conn.execute("""
+            SELECT * FROM users 
+            WHERE birth_month = ? AND birth_day = ?
+        """, (tomorrow.month, tomorrow.day)) as cursor:
+            rows = await cursor.fetchall()
+            return [User.from_dict(dict(row)) for row in rows]
+    
+    async def get_upcoming_birthdays(self, days: int = 30) -> List[User]:
+        """Get users with birthdays in the next N days."""
+        # This is a simplified version - for production, handle year boundaries
+        today = date.today()
+        users = []
+        
+        async with self.conn.execute("""
+            SELECT * FROM users 
+            WHERE birth_month IS NOT NULL AND birth_day IS NOT NULL
+        """) as cursor:
+            rows = await cursor.fetchall()
+            all_users = [User.from_dict(dict(row)) for row in rows]
+        
+        for user in all_users:
+            days_until = user.get_days_until_birthday()
+            if days_until is not None and 0 <= days_until <= days:
+                users.append(user)
+        
+        # Sort by days until birthday
+        users.sort(key=lambda u: u.get_days_until_birthday() or 999)
+        return users
+    
+    async def mark_birthday_wishes_sent(self, user_id: int, date_str: str):
+        """Mark that birthday wishes were sent to user."""
+        await self.conn.execute("""
+            UPDATE users 
+            SET birthday_wishes_sent = ?
+            WHERE user_id = ?
+        """, (date_str, user_id))
+        await self.conn.commit()
+    
+    async def mark_birthday_reminder_sent(self, user_id: int, date_str: str):
+        """Mark that birthday reminder was sent."""
+        await self.conn.execute("""
+            UPDATE users 
+            SET birthday_reminder_sent = ?
+            WHERE user_id = ?
+        """, (date_str, user_id))
+        await self.conn.commit()
+    
+    async def set_custom_birthday_message(self, user_id: int, message: str):
+        """Set custom birthday message for user."""
+        await self.conn.execute("""
+            UPDATE users 
+            SET custom_birthday_message = ?
+            WHERE user_id = ?
+        """, (message, user_id))
+        await self.conn.commit()
+    
+    async def clear_custom_birthday_message(self, user_id: int):
+        """Clear custom birthday message."""
+        await self.conn.execute("""
+            UPDATE users 
+            SET custom_birthday_message = NULL
+            WHERE user_id = ?
+        """, (user_id,))
+        await self.conn.commit()
+    
+    # Birthday wishes log operations
+    async def log_birthday_wish(self, user_id: int, wish_date: str, wish_type: str,
+                                custom_message: Optional[str] = None,
+                                sent_by_user_id: Optional[int] = None,
+                                dm_sent: bool = False, group_sent: bool = False):
+        """Log a birthday wish in the database."""
+        await self.conn.execute("""
+            INSERT INTO birthday_wishes 
+            (user_id, wish_date, wish_type, custom_message, sent_by_user_id, dm_sent, group_sent, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            user_id, wish_date, wish_type, custom_message, sent_by_user_id,
+            1 if dm_sent else 0, 1 if group_sent else 0, datetime.now().isoformat()
+        ))
+        await self.conn.commit()
+    
+    async def log_birthday_reminder(self, user_id: int, reminder_date: str, birthday_date: str,
+                                    user_dm_sent: bool = False, admin_dm_sent: bool = False,
+                                    group_sent: bool = False):
+        """Log a birthday reminder in the database."""
+        await self.conn.execute("""
+            INSERT INTO birthday_reminders 
+            (user_id, reminder_date, birthday_date, user_dm_sent, admin_dm_sent, group_sent, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            user_id, reminder_date, birthday_date,
+            1 if user_dm_sent else 0, 1 if admin_dm_sent else 0, 1 if group_sent else 0,
+            datetime.now().isoformat()
+        ))
+        await self.conn.commit()
+    
+    async def get_birthday_wishes_for_user(self, user_id: int) -> List[dict]:
+        """Get all birthday wishes sent to a user."""
+        async with self.conn.execute("""
+            SELECT * FROM birthday_wishes 
+            WHERE user_id = ? 
+            ORDER BY created_at DESC
+        """, (user_id,)) as cursor:
+            rows = await cursor.fetchall()
+            return [dict(row) for row in rows]
+    
+    async def get_birthday_reminders_for_user(self, user_id: int) -> List[dict]:
+        """Get all birthday reminders sent for a user."""
+        async with self.conn.execute("""
+            SELECT * FROM birthday_reminders 
+            WHERE user_id = ? 
+            ORDER BY created_at DESC
+        """, (user_id,)) as cursor:
+            rows = await cursor.fetchall()
+            return [dict(row) for row in rows]
     
     # Additional task operations
     async def get_tasks_created_after(self, timestamp: datetime) -> List[Task]:

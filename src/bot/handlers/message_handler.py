@@ -324,21 +324,113 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 # Create new user with actual Telegram info
                 from src.data.models import User, UserRole
                 # Get full name safely
-                full_name = getattr(message.from_user, 'full_name', None) or \
-                           getattr(message.from_user, 'first_name', None) or \
-                           username
+                first_name = getattr(message.from_user, 'first_name', None) or username
+                last_name = getattr(message.from_user, 'last_name', None)
+                
                 new_user = User(
                     user_id=user_id,
                     username=username,
-                    full_name=full_name,
+                    first_name=first_name,
+                    last_name=last_name,
                     role=UserRole.REGULAR,
                     created_at=datetime.now(),
                     last_active=datetime.now()
                 )
                 await user_repo.create_user(new_user)
-                logger.info(f"✅ Created user record: {user_id} -> @{username} ({full_name})")
+                logger.info(f"✅ Created user record: {user_id} -> @{username} ({first_name})")
+                
+                # Send employee info request if enabled
+                employee_info_service = context.bot_data.get("employee_info_service")
+                if employee_info_service and config.EMPLOYEE_INFO_ASK_ON_SIGNUP:
+                    # Send welcome DM with employee info request
+                    await employee_info_service.send_info_request_dm(context, new_user)
+                    logger.info(f"📧 Sent employee info request to new user {user_id}")
+                
         except Exception as e:
             logger.error(f"❌ Error syncing user info for {user_id} (@{username}): {e}", exc_info=True)
+    
+    # ============================================
+    # EMPLOYEE INFO DETECTION: Check if message contains employee information
+    # ============================================
+    employee_info_service = context.bot_data.get("employee_info_service")
+    if employee_info_service and '[EMPLOYEE_INFO]' in text:
+        try:
+            # Parse employee info from message
+            info_dict = employee_info_service.parse_employee_info_from_message(text)
+            
+            if info_dict:
+                # Validate the info
+                is_valid, errors = employee_info_service.validate_employee_info(info_dict)
+                
+                if is_valid:
+                    # Save to database
+                    success = await employee_info_service.save_employee_info(user_id, info_dict, "self")
+                    
+                    if success:
+                        # Get updated user
+                        updated_user = await user_repo.get_user(user_id)
+                        
+                        # Send confirmation DM
+                        confirmation_msg = employee_info_service.format_confirmation_message(updated_user)
+                        try:
+                            await context.bot.send_message(
+                                chat_id=user_id,
+                                text=confirmation_msg,
+                                parse_mode=None
+                            )
+                            logger.info(f"✅ Employee info saved for user {user_id}")
+                        except Exception as e:
+                            logger.error(f"Failed to send confirmation to user {user_id}: {e}")
+                        
+                        # Delete the employee info message from group (if in group)
+                        if message.chat.type in ['group', 'supergroup']:
+                            try:
+                                await message.delete()
+                                logger.info(f"🗑️ Deleted employee info message from group")
+                            except:
+                                pass
+                    else:
+                        # Send error DM
+                        try:
+                            await context.bot.send_message(
+                                chat_id=user_id,
+                                text="❌ Failed to save employee information. Please try again or contact an administrator.",
+                                parse_mode=None
+                            )
+                        except:
+                            pass
+                else:
+                    # Send validation errors DM
+                    error_msg = "❌ Employee information validation failed:\n\n"
+                    for error in errors:
+                        error_msg += f"• {error}\n"
+                    error_msg += "\nPlease correct the errors and try again."
+                    
+                    try:
+                        await context.bot.send_message(
+                            chat_id=user_id,
+                            text=error_msg,
+                            parse_mode=None
+                        )
+                        logger.warning(f"⚠️ Validation failed for user {user_id}: {errors}")
+                    except:
+                        pass
+            else:
+                # Failed to parse
+                try:
+                    await context.bot.send_message(
+                        chat_id=user_id,
+                        text="❌ Failed to parse employee information. Please check the format and try again.\n\nUse /updateinfo to see the correct format.",
+                        parse_mode=None
+                    )
+                except:
+                    pass
+            
+            # Stop processing this message (it's employee info, not a regular message)
+            return
+            
+        except Exception as e:
+            logger.error(f"Error processing employee info for user {user_id}: {e}")
     
     # ============================================
     # TOPIC PROTECTION: Prevent unauthorized access to restricted topics

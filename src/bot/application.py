@@ -133,6 +133,14 @@ async def setup_bot_application(config: Config) -> Application:
     from src.services.leave_request_service import LeaveRequestService
     leave_request_service = LeaveRequestService(attendance_repo, user_repo, task_service, config)
     
+    # Create employee info service
+    from src.services.employee_info_service import EmployeeInfoService
+    employee_info_service = EmployeeInfoService(user_repo, config)
+    
+    # Create birthday service
+    from src.services.birthday_service import BirthdayService
+    birthday_service = BirthdayService(user_repo, config)
+    
     # DISABLED: Auto-recovery on startup
     # This was deleting tasks from previous runs because the Bot API can't read old messages
     # await topic_scanner.sync_database_with_topic_reality(application)
@@ -168,6 +176,8 @@ async def setup_bot_application(config: Config) -> Application:
     application.bot_data["deadline_reminder_service"] = deadline_reminder_service
     application.bot_data["task_routing_service"] = task_routing_service
     application.bot_data["leave_request_service"] = leave_request_service
+    application.bot_data["employee_info_service"] = employee_info_service
+    application.bot_data["birthday_service"] = birthday_service
     application.bot_data["db_adapter"] = db_adapter
     application.bot_data["user_repository"] = user_repo  # Add user repository for username lookups
     application.bot_data["attendance_repository"] = attendance_repo  # Add attendance repository for leave requests

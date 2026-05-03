@@ -114,6 +114,26 @@ class Config:
     FEATURE_PREDICTIVE_ALERTS: bool = True
     FEATURE_ANALYTICS_DASHBOARD: bool = True
     FEATURE_DAILY_SUMMARY: bool = True
+    FEATURE_BIRTHDAY_WISHES: bool = True
+    
+    # Employee Information Configuration
+    EMPLOYEE_INFO_ASK_ON_SIGNUP: bool = True
+    EMPLOYEE_INFO_REQUIRED_FIELDS: str = "NAME,BIRTHDAY,EMAIL,PHONE,DEPARTMENT,POSITION"
+    EMPLOYEE_INFO_OPTIONAL_FIELDS: str = "JOIN_DATE,EMERGENCY_CONTACT,BLOOD_GROUP,ADDRESS,SKILLS,NOTES"
+    EMPLOYEE_INFO_USER_CAN_UPDATE: bool = True
+    
+    # Birthday Configuration
+    BIRTHDAY_CHECK_TIME: str = "09:00"
+    BIRTHDAY_REMINDER_TIME: str = "18:00"
+    BIRTHDAY_SEND_DM: bool = True
+    BIRTHDAY_SEND_GROUP: bool = True
+    BIRTHDAY_INCLUDE_AGE: bool = False
+    
+    # Birthday Reminder Configuration
+    BIRTHDAY_REMINDER_SEND_TO_USER: bool = True
+    BIRTHDAY_REMINDER_SEND_TO_ADMIN_DM: bool = True
+    BIRTHDAY_REMINDER_SEND_TO_ADMIN_PANEL: bool = True
+    BIRTHDAY_REMINDER_GROUP_MULTIPLE: bool = True
     
     # Task Routing Configuration
     ENABLE_AUTO_ASSIGN: bool = False  # Enable automatic task assignment
@@ -373,6 +393,26 @@ class Config:
             FEATURE_PREDICTIVE_ALERTS=parse_bool("FEATURE_PREDICTIVE_ALERTS", True),
             FEATURE_ANALYTICS_DASHBOARD=parse_bool("FEATURE_ANALYTICS_DASHBOARD", True),
             FEATURE_DAILY_SUMMARY=parse_bool("FEATURE_DAILY_SUMMARY", True),
+            FEATURE_BIRTHDAY_WISHES=parse_bool("FEATURE_BIRTHDAY_WISHES", True),
+            
+            # Employee Information Configuration
+            EMPLOYEE_INFO_ASK_ON_SIGNUP=parse_bool("EMPLOYEE_INFO_ASK_ON_SIGNUP", True),
+            EMPLOYEE_INFO_REQUIRED_FIELDS=os.getenv("EMPLOYEE_INFO_REQUIRED_FIELDS", "NAME,BIRTHDAY,EMAIL,PHONE,DEPARTMENT,POSITION"),
+            EMPLOYEE_INFO_OPTIONAL_FIELDS=os.getenv("EMPLOYEE_INFO_OPTIONAL_FIELDS", "JOIN_DATE,EMERGENCY_CONTACT,BLOOD_GROUP,ADDRESS,SKILLS,NOTES"),
+            EMPLOYEE_INFO_USER_CAN_UPDATE=parse_bool("EMPLOYEE_INFO_USER_CAN_UPDATE", True),
+            
+            # Birthday Configuration
+            BIRTHDAY_CHECK_TIME=os.getenv("BIRTHDAY_CHECK_TIME", "09:00"),
+            BIRTHDAY_REMINDER_TIME=os.getenv("BIRTHDAY_REMINDER_TIME", "18:00"),
+            BIRTHDAY_SEND_DM=parse_bool("BIRTHDAY_SEND_DM", True),
+            BIRTHDAY_SEND_GROUP=parse_bool("BIRTHDAY_SEND_GROUP", True),
+            BIRTHDAY_INCLUDE_AGE=parse_bool("BIRTHDAY_INCLUDE_AGE", False),
+            
+            # Birthday Reminder Configuration
+            BIRTHDAY_REMINDER_SEND_TO_USER=parse_bool("BIRTHDAY_REMINDER_SEND_TO_USER", True),
+            BIRTHDAY_REMINDER_SEND_TO_ADMIN_DM=parse_bool("BIRTHDAY_REMINDER_SEND_TO_ADMIN_DM", True),
+            BIRTHDAY_REMINDER_SEND_TO_ADMIN_PANEL=parse_bool("BIRTHDAY_REMINDER_SEND_TO_ADMIN_PANEL", True),
+            BIRTHDAY_REMINDER_GROUP_MULTIPLE=parse_bool("BIRTHDAY_REMINDER_GROUP_MULTIPLE", True),
             
             # Task Routing Configuration
             ENABLE_AUTO_ASSIGN=parse_bool("ENABLE_AUTO_ASSIGN", False),

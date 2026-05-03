@@ -6448,6 +6448,21 @@ def setup_command_handlers(application: Application, config: Config):
     application.add_handler(CommandHandler("meetings", cmd_meetings))
     application.add_handler(CommandHandler("mymeetings", cmd_mymeetings))
     application.add_handler(CommandHandler("cancelmeeting", cmd_cancelmeeting))
+    
+    # Employee Info commands
+    application.add_handler(CommandHandler("updateinfo", cmd_updateinfo))
+    application.add_handler(CommandHandler("myinfo", cmd_myinfo))
+    application.add_handler(CommandHandler("mybirthday", cmd_mybirthday))
+    application.add_handler(CommandHandler("skip", cmd_skip))
+    
+    # Admin Employee Info commands
+    application.add_handler(CommandHandler("setinfo", cmd_setinfo))
+    application.add_handler(CommandHandler("viewinfo", cmd_viewinfo))
+    
+    # Birthday commands
+    application.add_handler(CommandHandler("birthdays", cmd_birthdays))
+    application.add_handler(CommandHandler("birthdaytoday", cmd_birthdaytoday))
+    application.add_handler(CommandHandler("birthday", cmd_birthday))
     application.add_handler(CommandHandler("myactions", cmd_myactions))
     application.add_handler(CommandHandler("actionitems", cmd_actionitems))
     application.add_handler(CommandHandler("meeting", cmd_meeting))
@@ -9428,3 +9443,533 @@ _⏱️ This message will auto-delete in 120 seconds_"""
             )
         except:
             pass
+
+
+
+# ============================================
+# Employee Info Commands
+# ============================================
+
+async def cmd_updateinfo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /updateinfo command - User updates their employee information."""
+    user_id = update.effective_user.id
+    
+    try:
+        # Delete command message
+        await update.message.delete()
+    except:
+        pass
+    
+    # Get services
+    employee_info_service = context.bot_data.get("employee_info_service")
+    user_repo = context.bot_data.get("user_repository")
+    
+    if not employee_info_service or not user_repo:
+        await context.bot.send_message(
+            chat_id=user_id,
+            text="❌ Service not available. Please contact an administrator."
+        )
+        return
+    
+    # Get user
+    user = await user_repo.get_user(user_id)
+    if not user:
+        await context.bot.send_message(
+            chat_id=user_id,
+            text="❌ User not found. Please contact an administrator."
+        )
+        return
+    
+    # Send update request message
+    message = employee_info_service.format_update_request_message(user)
+    await context.bot.send_message(
+        chat_id=user_id,
+        text=message,
+        parse_mode=None
+    )
+    logger.info(f"Sent employee info update request to user {user_id}")
+
+
+async def cmd_myinfo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /myinfo command - View your employee information."""
+    user_id = update.effective_user.id
+    
+    try:
+        # Delete command message
+        await update.message.delete()
+    except:
+        pass
+    
+    # Get services
+    employee_info_service = context.bot_data.get("employee_info_service")
+    user_repo = context.bot_data.get("user_repository")
+    
+    if not employee_info_service or not user_repo:
+        await context.bot.send_message(
+            chat_id=user_id,
+            text="❌ Service not available. Please contact an administrator."
+        )
+        return
+    
+    # Get user
+    user = await user_repo.get_user(user_id)
+    if not user:
+        await context.bot.send_message(
+            chat_id=user_id,
+            text="❌ User not found. Please contact an administrator."
+        )
+        return
+    
+    # Format and send info
+    if user.full_name or user.email or user.phone:
+        message = "📋 Your Employee Information\n\n"
+        message += employee_info_service.format_employee_info_display(user)
+        message += "\n\nUpdate with /updateinfo"
+    else:
+        message = "📋 No employee information on file.\n\nAdd your information with /updateinfo"
+    
+    await context.bot.send_message(
+        chat_id=user_id,
+        text=message,
+        parse_mode=None
+    )
+    logger.info(f"Sent employee info to user {user_id}")
+
+
+async def cmd_mybirthday(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /mybirthday command - View your birthday information."""
+    user_id = update.effective_user.id
+    
+    try:
+        # Delete command message
+        await update.message.delete()
+    except:
+        pass
+    
+    # Get user
+    user_repo = context.bot_data.get("user_repository")
+    if not user_repo:
+        await context.bot.send_message(
+            chat_id=user_id,
+            text="❌ Service not available."
+        )
+        return
+    
+    user = await user_repo.get_user(user_id)
+    if not user:
+        await context.bot.send_message(
+            chat_id=user_id,
+            text="❌ User not found."
+        )
+        return
+    
+    # Format birthday info
+    if user.birth_date:
+        birthday_display = user.get_birthday_display()
+        days_until = user.get_days_until_birthday()
+        
+        message = f"🎂 Your Birthday Information\n\n"
+        message += f"📅 Birthday: {birthday_display}\n"
+        
+        if days_until == 0:
+            message += "\n🎉 Today is your birthday! Happy Birthday! 🎉"
+        elif days_until == 1:
+            message += "\n🎈 Tomorrow is your birthday!"
+        elif days_until:
+            message += f"\n⏳ Days until birthday: {days_until}"
+        
+        age = user.get_age()
+        if age:
+            message += f"\n🎂 Current age: {age}"
+        
+        message += "\n\nUpdate with /updateinfo"
+    else:
+        message = "🎂 No birthday on file.\n\nAdd your birthday with /updateinfo"
+    
+    await context.bot.send_message(
+        chat_id=user_id,
+        text=message,
+        parse_mode=None
+    )
+
+
+async def cmd_skip(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /skip command - Skip employee info setup."""
+    user_id = update.effective_user.id
+    
+    try:
+        await update.message.delete()
+    except:
+        pass
+    
+    message = """✅ Employee info setup skipped.
+
+You can add your information anytime with /updateinfo
+
+Note: Some features may require complete employee information."""
+    
+    await context.bot.send_message(
+        chat_id=user_id,
+        text=message,
+        parse_mode=None
+    )
+    logger.info(f"User {user_id} skipped employee info setup")
+
+
+# ============================================
+# Admin Employee Info Commands
+# ============================================
+
+async def cmd_setinfo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /setinfo command - Admin sets user employee information."""
+    user_id = update.effective_user.id
+    config = context.bot_data.get("config")
+    
+    # Check permissions
+    if user_id not in (config.ADMINISTRATORS + config.MANAGERS + config.OWNERS):
+        await update.message.reply_text("❌ You don't have permission to use this command.")
+        return
+    
+    try:
+        await update.message.delete()
+    except:
+        pass
+    
+    # Parse command: /setinfo @username or /setinfo (shows format)
+    args = context.args
+    
+    if not args:
+        # Show format
+        message = """📋 Set Employee Information (Admin)
+
+**Usage:**
+/setinfo @username
+
+Then reply with employee information in this format:
+
+[EMPLOYEE_INFO]
+[NAME] Full Name
+[BIRTHDAY] DD-MM-YYYY
+[EMAIL] email@example.com
+[PHONE] +1234567890
+[DEPARTMENT] Department
+[POSITION] Job Title
+[JOIN_DATE] DD-MM-YYYY
+[EMERGENCY_CONTACT] Name: Phone
+[BLOOD_GROUP] A+/B+/O+/AB+/A-/B-/O-/AB-
+[ADDRESS] Address (optional)
+[SKILLS] Skills (optional)
+[NOTES] Notes (optional)"""
+        
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=message,
+            parse_mode=None
+        )
+        return
+    
+    # Get target username
+    target_username = args[0].lstrip('@')
+    
+    # Get user repo
+    user_repo = context.bot_data.get("user_repository")
+    if not user_repo:
+        await context.bot.send_message(
+            chat_id=user_id,
+            text="❌ Service not available."
+        )
+        return
+    
+    # Find user
+    target_user = await user_repo.get_user_by_username(target_username)
+    if not target_user:
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=f"❌ User @{target_username} not found."
+        )
+        return
+    
+    # Send format instructions
+    message = f"""📋 Setting employee info for @{target_username}
+
+Reply with employee information in this format:
+
+[EMPLOYEE_INFO]
+[NAME] Full Name
+[BIRTHDAY] DD-MM-YYYY
+[EMAIL] email@example.com
+[PHONE] +1234567890
+[DEPARTMENT] Department
+[POSITION] Job Title
+[JOIN_DATE] DD-MM-YYYY
+[EMERGENCY_CONTACT] Name: Phone
+[BLOOD_GROUP] A+
+[ADDRESS] Address (optional)
+[SKILLS] Skills (optional)
+[NOTES] Notes (optional)
+
+The user will be notified of the update."""
+    
+    await context.bot.send_message(
+        chat_id=user_id,
+        text=message,
+        parse_mode=None
+    )
+
+
+async def cmd_viewinfo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /viewinfo command - Admin views user employee information."""
+    user_id = update.effective_user.id
+    config = context.bot_data.get("config")
+    
+    # Check permissions
+    if user_id not in (config.ADMINISTRATORS + config.MANAGERS + config.OWNERS):
+        await update.message.reply_text("❌ You don't have permission to use this command.")
+        return
+    
+    try:
+        await update.message.delete()
+    except:
+        pass
+    
+    # Parse command: /viewinfo @username
+    args = context.args
+    
+    if not args:
+        await context.bot.send_message(
+            chat_id=user_id,
+            text="Usage: /viewinfo @username"
+        )
+        return
+    
+    target_username = args[0].lstrip('@')
+    
+    # Get services
+    user_repo = context.bot_data.get("user_repository")
+    employee_info_service = context.bot_data.get("employee_info_service")
+    
+    if not user_repo or not employee_info_service:
+        await context.bot.send_message(
+            chat_id=user_id,
+            text="❌ Service not available."
+        )
+        return
+    
+    # Find user
+    target_user = await user_repo.get_user_by_username(target_username)
+    if not target_user:
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=f"❌ User @{target_username} not found."
+        )
+        return
+    
+    # Format and send info
+    if target_user.full_name or target_user.email or target_user.phone:
+        message = f"📋 Employee Information for @{target_username}\n\n"
+        message += employee_info_service.format_employee_info_display(target_user)
+        
+        # Add metadata
+        if target_user.info_set_by:
+            message += f"\n\n📝 Set by: {target_user.info_set_by}"
+        if target_user.info_updated_at:
+            message += f"\n🕐 Last updated: {target_user.info_updated_at.strftime('%Y-%m-%d %H:%M')}"
+    else:
+        message = f"📋 No employee information on file for @{target_username}"
+    
+    await context.bot.send_message(
+        chat_id=user_id,
+        text=message,
+        parse_mode=None
+    )
+
+
+# ============================================
+# Birthday Commands
+# ============================================
+
+async def cmd_birthdays(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /birthdays command - View upcoming birthdays."""
+    user_id = update.effective_user.id
+    
+    try:
+        await update.message.delete()
+    except:
+        pass
+    
+    # Get user repo
+    user_repo = context.bot_data.get("user_repository")
+    if not user_repo:
+        await context.bot.send_message(
+            chat_id=user_id,
+            text="❌ Service not available."
+        )
+        return
+    
+    # Get upcoming birthdays (next 30 days)
+    upcoming = await user_repo.get_upcoming_birthdays(30)
+    
+    if not upcoming:
+        message = "🎂 No upcoming birthdays in the next 30 days."
+    else:
+        message = f"🎂 Upcoming Birthdays (Next 30 Days)\n\n"
+        
+        for user in upcoming:
+            display_name = user.get_display_name()
+            username = f"@{user.username}" if user.username else ""
+            birthday_display = user.get_birthday_display()
+            days_until = user.get_days_until_birthday()
+            
+            if days_until == 0:
+                days_str = "🎉 Today!"
+            elif days_until == 1:
+                days_str = "🎈 Tomorrow"
+            else:
+                days_str = f"⏳ In {days_until} days"
+            
+            message += f"• {display_name} {username}\n"
+            message += f"  📅 {birthday_display} - {days_str}\n"
+            if user.department:
+                message += f"  🏢 {user.department}\n"
+            message += "\n"
+    
+    await context.bot.send_message(
+        chat_id=user_id,
+        text=message,
+        parse_mode=None
+    )
+
+
+async def cmd_birthdaytoday(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /birthdaytoday command - View today's birthdays."""
+    user_id = update.effective_user.id
+    
+    try:
+        await update.message.delete()
+    except:
+        pass
+    
+    # Get user repo
+    user_repo = context.bot_data.get("user_repository")
+    if not user_repo:
+        await context.bot.send_message(
+            chat_id=user_id,
+            text="❌ Service not available."
+        )
+        return
+    
+    # Get today's birthdays
+    today_birthdays = await user_repo.get_users_with_birthday_today()
+    
+    if not today_birthdays:
+        message = "🎂 No birthdays today."
+    else:
+        message = f"🎂 Birthday{'s' if len(today_birthdays) > 1 else ''} Today! 🎉\n\n"
+        
+        for user in today_birthdays:
+            display_name = user.get_display_name()
+            username = f"@{user.username}" if user.username else ""
+            age = user.get_age()
+            
+            message += f"🎉 {display_name} {username}\n"
+            if age:
+                message += f"   🎈 Turning {age} today!\n"
+            if user.position:
+                message += f"   💼 {user.position}\n"
+            if user.department:
+                message += f"   🏢 {user.department}\n"
+            message += "\n"
+        
+        message += "Don't forget to wish them! 🎁"
+    
+    await context.bot.send_message(
+        chat_id=user_id,
+        text=message,
+        parse_mode=None
+    )
+
+
+async def cmd_birthday(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /birthday command - Admin sends custom birthday wish."""
+    user_id = update.effective_user.id
+    config = context.bot_data.get("config")
+    
+    # Check permissions
+    if user_id not in (config.ADMINISTRATORS + config.MANAGERS + config.OWNERS):
+        await update.message.reply_text("❌ You don't have permission to use this command.")
+        return
+    
+    try:
+        await update.message.delete()
+    except:
+        pass
+    
+    # Parse command: /birthday @username Custom message here
+    args = context.args
+    
+    if len(args) < 2:
+        message = """🎂 Send Custom Birthday Wish (Admin)
+
+**Usage:**
+/birthday @username Your custom birthday message here
+
+**Example:**
+/birthday @john Happy Birthday John! You're an amazing team member!
+
+The message will be sent as DM and announced in Official Directives."""
+        
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=message,
+            parse_mode=None
+        )
+        return
+    
+    target_username = args[0].lstrip('@')
+    custom_message = ' '.join(args[1:])
+    
+    # Get services
+    user_repo = context.bot_data.get("user_repository")
+    birthday_service = context.bot_data.get("birthday_service")
+    
+    if not user_repo or not birthday_service:
+        await context.bot.send_message(
+            chat_id=user_id,
+            text="❌ Service not available."
+        )
+        return
+    
+    # Find target user
+    target_user = await user_repo.get_user_by_username(target_username)
+    if not target_user:
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=f"❌ User @{target_username} not found."
+        )
+        return
+    
+    # Get admin user
+    admin_user = await user_repo.get_user(user_id)
+    if not admin_user:
+        await context.bot.send_message(
+            chat_id=user_id,
+            text="❌ Admin user not found."
+        )
+        return
+    
+    # Send custom birthday wish
+    success = await birthday_service.send_custom_birthday_wish(
+        context, target_user, custom_message, admin_user
+    )
+    
+    if success:
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=f"✅ Custom birthday wish sent to @{target_username}!"
+        )
+        logger.info(f"Admin {user_id} sent custom birthday wish to {target_user.user_id}")
+    else:
+        await context.bot.send_message(
+            chat_id=user_id,
+            text="❌ Failed to send birthday wish. Check logs for details."
+        )

@@ -16,9 +16,10 @@ Welcome to Pova, your intelligent administrative automation system! This guide w
 6. [Issue Reporting](#issue-reporting)
 7. [Attendance & Leave](#attendance--leave)
 8. [Meetings](#meetings)
-9. [Commands Reference](#commands-reference)
-10. [Best Practices](#best-practices)
-11. [Troubleshooting](#troubleshooting)
+9. [Birthday System](#birthday-system)
+10. [Commands Reference](#commands-reference)
+11. [Best Practices](#best-practices)
+12. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -756,6 +757,80 @@ After meetings, notes are posted in Boardroom:
 
 ---
 
+## 🎂 Birthday System
+
+### Overview
+
+Pova automatically celebrates your birthday with:
+- 🎉 Personal birthday wishes (DM)
+- 📢 Public announcement in Official Directives
+- ⏰ Reminder the day before
+- 🎁 Team celebration
+
+### Adding Your Birthday
+
+When you first join, Pova asks for your employee information including birthday. You can also add it later.
+
+**Format:**
+- **With year**: `DD-MM-YYYY` (e.g., `15-05-1990`) - Shows your age
+- **Without year**: `DD-MM` (e.g., `15-05`) - Age not shown
+
+**Example:**
+```
+[EMPLOYEE_INFO]
+[NAME] John Doe
+[BIRTHDAY] 15-05-1990
+[EMAIL] john@povaly.com
+[PHONE] +1234567890
+[DEPARTMENT] Development
+[POSITION] Developer
+```
+
+### How It Works
+
+**On Your Birthday (9:00 AM):**
+1. You receive a personal DM with birthday wishes
+2. Announcement posted in Official Directives
+3. Team can wish you in the thread
+
+**Day Before (6:00 PM):**
+1. You receive a reminder
+2. Admins are notified
+3. Team prepares to celebrate
+
+### Birthday Commands
+
+```bash
+/mybirthday          # View your birthday info
+/updateinfo          # Update your birthday
+/birthdays           # See upcoming birthdays
+/birthdaytoday       # See today's birthdays
+```
+
+### Privacy
+
+- Your birthday is visible to the team on your birthday
+- Age is only shown if you provide birth year
+- You can use `DD-MM` format to hide your age
+- Full employee info is private (admins only)
+
+### Tips
+
+✅ **DO:**
+- Add your birthday for team celebration
+- Use correct format (DD-MM-YYYY or DD-MM)
+- Update if you made a mistake
+- Wish your teammates on their birthdays
+
+❌ **DON'T:**
+- Provide fake birthdays
+- Delete birthday announcements
+- Ignore birthday reminders
+
+**For detailed information, see:** `docs/GUIDE_BIRTHDAY_SYSTEM.md`
+
+---
+
 ## 📚 Commands Reference
 
 ### Quick Command List
@@ -810,6 +885,16 @@ After meetings, notes are posted in Boardroom:
 /mymeetings           # View your meetings
 /myactions            # View action items
 /meetinghelp          # Meeting guide
+```
+
+**Birthday & Employee Info:**
+```bash
+/updateinfo           # Update your employee information
+/myinfo               # View your employee profile
+/mybirthday           # View your birthday information
+/skip                 # Skip employee info setup
+/birthdays            # View upcoming birthdays (30 days)
+/birthdaytoday        # View today's birthdays
 ```
 
 **General:**
