@@ -9,7 +9,7 @@ async def migrate_up(db_adapter):
     """Apply migration - create admin_alerts table."""
     try:
         # Create admin_alerts table
-        await db_adapter.execute("""
+        await db_adapter.conn.execute("""
             CREATE TABLE IF NOT EXISTS admin_alerts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 message_id INTEGER NOT NULL UNIQUE,
@@ -27,17 +27,17 @@ async def migrate_up(db_adapter):
         """)
         
         # Create indexes
-        await db_adapter.execute("""
+        await db_adapter.conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_admin_alerts_message_id 
             ON admin_alerts(message_id)
         """)
         
-        await db_adapter.execute("""
+        await db_adapter.conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_admin_alerts_resolved 
             ON admin_alerts(resolved)
         """)
         
-        await db_adapter.execute("""
+        await db_adapter.conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_admin_alerts_created_at 
             ON admin_alerts(created_at)
         """)
@@ -53,7 +53,7 @@ async def migrate_up(db_adapter):
 async def migrate_down(db_adapter):
     """Rollback migration - drop admin_alerts table."""
     try:
-        await db_adapter.execute("DROP TABLE IF EXISTS admin_alerts")
+        await db_adapter.conn.execute("DROP TABLE IF EXISTS admin_alerts")
         logger.info("✅ Migration 007 rollback: admin_alerts table dropped")
         return True
         

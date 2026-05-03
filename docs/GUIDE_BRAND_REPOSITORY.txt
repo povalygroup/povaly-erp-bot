@@ -58,10 +58,7 @@ Old versions remain visible for reference
 ⚡ COMMANDS
 
 /brand - View all brands
-/brandassets #BRAND - View all assets for brand
-/asset #BRAND TYPE - View specific asset type
-/brandassets #BRAND TYPE - View assets by type
-/downloadasset #BRAND TYPE - Get latest asset link
+/pin - Pin important assets
 
 👷 FOR EMPLOYEES
 

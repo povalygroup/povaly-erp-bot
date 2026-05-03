@@ -97,7 +97,7 @@ class QAService:
     ) -> bool:
         """
         Claim a QA submission for review (👍 reaction).
-        Changes status from PENDING to IN_REVIEW.
+        Works from any status - allows re-claiming after approval/rejection revert.
         
         Args:
             ticket: Task ticket ID
@@ -111,29 +111,18 @@ class QAService:
             logger.warning(f"QA submission not found for task {ticket}")
             return False
         
-        # Only claim if PENDING (not already approved/rejected)
-        if submission.status == QAStatus.PENDING:
-            await self.qa_repo.update_submission_status(
-                ticket,
-                QAStatus.IN_REVIEW,
-                reviewer_id,
-                datetime.now()
-            )
-            logger.info(f"QA for task {ticket} claimed for review by user {reviewer_id}")
-            return True
-        elif submission.status == QAStatus.IN_REVIEW:
-            # Already in review, just update reviewer
-            await self.qa_repo.update_submission_status(
-                ticket,
-                QAStatus.IN_REVIEW,
-                reviewer_id,
-                datetime.now()
-            )
-            logger.info(f"QA for task {ticket} re-claimed by user {reviewer_id}")
-            return True
-        else:
-            logger.warning(f"Cannot claim QA for {ticket} - status is {submission.status}")
-            return False
+        # Allow claiming from any status (robust behavior - supports reversal workflow)
+        logger.info(f"Claiming QA for {ticket} (current status: {submission.status})")
+        
+        # Update to IN_REVIEW status
+        await self.qa_repo.update_submission_status(
+            ticket,
+            QAStatus.IN_REVIEW,
+            reviewer_id,
+            datetime.now()
+        )
+        logger.info(f"QA for task {ticket} claimed for review by user {reviewer_id}")
+        return True
     
     async def approve_qa(
         self,
@@ -142,7 +131,7 @@ class QAService:
     ) -> bool:
         """
         Approve a QA submission.
-        Works anytime - even if already approved (robust behavior).
+        Works anytime - allows re-approval after revert (robust behavior).
         
         Args:
             ticket: Task ticket ID
@@ -156,21 +145,8 @@ class QAService:
             logger.warning(f"QA submission not found for task {ticket}")
             return False
         
-        # Allow re-approval (robust behavior)
-        if submission.status == QAStatus.APPROVED:
-            logger.info(f"QA submission for {ticket} already approved, updating reviewer to {reviewer_id}")
-            reviewed_at = datetime.now()
-            await self.qa_repo.update_submission_status(
-                ticket,
-                QAStatus.APPROVED,
-                reviewer_id,
-                reviewed_at
-            )
-            return True
-        
-        if submission.status not in [QAStatus.PENDING, QAStatus.IN_REVIEW]:
-            logger.warning(f"QA submission for {ticket} is not pending/in_review (status: {submission.status})")
-            return False
+        # Allow approval from any status (robust behavior - supports reversal)
+        logger.info(f"Approving QA for {ticket} (current status: {submission.status})")
         
         # Update submission status
         reviewed_at = datetime.now()
@@ -191,6 +167,7 @@ class QAService:
     ) -> bool:
         """
         Reject a QA submission.
+        Works anytime - allows re-rejection after revert (robust behavior).
         
         Args:
             ticket: Task ticket ID
@@ -204,9 +181,8 @@ class QAService:
             logger.warning(f"QA submission not found for task {ticket}")
             return False
         
-        if submission.status not in [QAStatus.PENDING, QAStatus.IN_REVIEW]:
-            logger.warning(f"QA submission for {ticket} is not pending/in_review (status: {submission.status})")
-            return False
+        # Allow rejection from any status (robust behavior - supports reversal)
+        logger.info(f"Rejecting QA for {ticket} (current status: {submission.status})")
         
         # Update submission status
         reviewed_at = datetime.now()

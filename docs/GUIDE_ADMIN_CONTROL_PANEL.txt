@@ -21,12 +21,10 @@ System posts alerts for:
 
 ⚡ COMMANDS
 
-/alerts - View all pending alerts
-/alerts TYPE - View specific type (escalated, overdue, qa, leave, violations)
-/alert #TICKET - View full alert details
-/dismissalert #TICKET - Mark as handled
-/alertstats - View alert statistics
-/adminactions - View pending admin actions
+/dailysummary - Trigger daily summary
+/attendance <user> - View user attendance
+/attendancedetails <user> <date> - Detailed attendance
+/pendingleave - View pending leave requests
 
 👑 FOR ADMINS/MANAGERS
 

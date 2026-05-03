@@ -48,6 +48,10 @@ async def setup_bot_application(config: Config) -> Application:
     qa_repo = QARepository(db_adapter)
     issue_repo = IssueRepository(db_adapter)
     
+    # Create meeting repository
+    from src.data.repositories.meeting_repository import MeetingRepository
+    meeting_repo = MeetingRepository(db_adapter)
+    
     # Create state engine
     state_engine = StateEngine(task_repo)
     
@@ -56,12 +60,28 @@ async def setup_bot_application(config: Config) -> Application:
     qa_service = QAService(task_repo, qa_repo, state_engine)
     issue_service = IssueService(db_adapter)
     
+    # Create meeting service
+    from src.services.meeting_service import MeetingService
+    meeting_service = MeetingService(meeting_repo, user_repo, config)
+    
     # Create application
     application = (
         Application.builder()
         .token(config.TELEGRAM_BOT_TOKEN)
         .build()
     )
+    
+    # Create bot context object for services
+    class BotContext:
+        def __init__(self, bot, bot_data):
+            self.bot = bot
+            self.bot_data = bot_data
+    
+    bot_context = BotContext(application.bot, application.bot_data)
+    
+    # Create meeting reminder service
+    from src.services.meeting_reminder_service import MeetingReminderService
+    meeting_reminder_service = MeetingReminderService(meeting_repo, user_repo, bot_context, config)
     
     # Create escalation service (needs bot context and task service)
     escalation_service = EscalationService(issue_service, application, config, task_service)
@@ -95,7 +115,6 @@ async def setup_bot_application(config: Config) -> Application:
             self.bot = bot
             self.bot_data = bot_data
     
-    bot_context = BotContext(application.bot, application.bot_data)
     daily_summary_service = DailySummaryService(bot_context, config, task_service, issue_service, qa_service)
     
     # Create report service
@@ -135,6 +154,8 @@ async def setup_bot_application(config: Config) -> Application:
     application.bot_data["task_service"] = task_service
     application.bot_data["qa_service"] = qa_service
     application.bot_data["issue_service"] = issue_service
+    application.bot_data["meeting_service"] = meeting_service
+    application.bot_data["meeting_reminder_service"] = meeting_reminder_service
     application.bot_data["issue_repository"] = issue_service.repository  # Add issue repository for issue_ticket generation
     application.bot_data["escalation_service"] = escalation_service
     application.bot_data["qa_escalation_service"] = qa_escalation_service

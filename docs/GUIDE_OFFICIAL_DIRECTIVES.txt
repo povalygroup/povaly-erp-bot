@@ -56,28 +56,29 @@ On 👎 reaction:
 
 ⏰ ACKNOWLEDGMENT TRACKING
 
-/directiveack DIRECTIVE_ID
-Shows: ACKNOWLEDGED, AGREED, DISAGREED, NOT ACKNOWLEDGED
+Admins can track acknowledgments by checking reactions on directive messages.
 
-/pendingack
-Shows all directives not yet acknowledged by you
+👍 = User acknowledged
+❤️ = User agreed
+👎 = User disagreed
+
+Check message reactions to see who has acknowledged.
 
 ⚡ COMMANDS
 
-/directives - View all directives
-/directive #ID - View full details
-/myack - View your acknowledgments
-/postdirective - Post new directive (admin)
+/pin - Pin directive message
+
+Note: Directive system is currently manual. Post announcements in the format above and use /pin to pin them.
 
 👑 FOR LEADERSHIP/MANAGERS
 
 WORKFLOW:
 1. Compose directive
-2. Use /postdirective command
+2. Post in Official Directives topic
 3. Fill in all required fields
 4. Set priority and deadline
-5. Message auto-pinned
-6. Monitor acknowledgments
+5. Use /pin to pin message
+6. Monitor acknowledgments via reactions
 7. Follow up on non-acknowledgers
 8. Track disagreements
 
@@ -120,5 +121,5 @@ WORKFLOW:
 ❓ NEED HELP?
 
 Unclear directive? → Ask in Core Operations
-Need to post? → Use /postdirective command
-Check acknowledgments? → Use /directiveack command
+Need to post? → Use the format above and /pin
+Check acknowledgments? → Check message reactions

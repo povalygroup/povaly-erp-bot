@@ -18,13 +18,14 @@ def build_mytasks_message(context, tasks_by_state, total_tasks, chat_id, user_id
         message += f"🆔 **ID:** {user_id}\n\n"
     
     # State order
-    state_order = ['ASSIGNED', 'STARTED', 'QA_SUBMITTED', 'REJECTED', 'APPROVED']
+    state_order = ['ASSIGNED', 'STARTED', 'QA_SUBMITTED', 'REJECTED', 'APPROVED', 'COMPLETED']
     state_emojis = {
         'ASSIGNED': '📌',
         'STARTED': '⚙️',
         'QA_SUBMITTED': '🔍',
         'REJECTED': '❌',
-        'APPROVED': '✅'
+        'APPROVED': '✅',
+        'COMPLETED': '🎉'
     }
     
     # Get config and pagination data

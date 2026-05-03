@@ -1,6 +1,48 @@
-📋 BOARDROOM GUIDE — MEETING NOTES & DECISIONS
+📋 BOARDROOM GUIDE — MEETING INVITATIONS & NOTES
 
-🎯 PURPOSE: Record meeting notes, decisions, and action items.
+🎯 PURPOSE: Schedule meetings and record meeting notes, decisions, and action items.
+
+📅 MEETING INVITATION FORMAT
+
+[MEETING_ID] MTG260501
+[MEETING_INVITE] Meeting title
+[DATE] YYYY-MM-DD
+[TIME] HH:MM - HH:MM GMT+6
+[DURATION] X hours / X minutes
+[LOCATION] Zoom link / Physical location / Telegram call
+[ORGANIZER] @username
+[ATTENDEES] @user1, @user2, @user3
+[AGENDA]
+• Topic 1
+• Topic 2
+• Topic 3
+[PREPARATION] What to prepare (optional)
+[PRIORITY] LOW / MEDIUM / HIGH / URGENT
+
+MEETING ID:
+• Format: MTGYYMMXX (e.g., MTG260501)
+• Leave blank for auto-generation
+• System auto-corrects if duplicate/invalid
+• Use /newmeeting for pre-filled template
+
+SPECIAL ATTENDEE GROUPS:
+• @all - Everyone (including on leave)
+• @allactives - Active users only
+• @employees - All employees
+• @activeemployees - Active employees only
+• @admins, @managers, @owners - Role-based
+
+AUTOMATED REMINDERS:
+System sends reminders at 24h, 1h, and 15m before meeting
+
+RSVP (Attendance Confirmation):
+React to meeting invitation to confirm your attendance
+
+RSVP REACTIONS:
+👍 = I will attend
+❤️ = I will attend and I'm prepared
+👎 = I cannot attend
+🔥 = I have an urgent conflict
 
 📝 MEETING NOTES FORMAT
 
@@ -36,12 +78,15 @@ Reactions track status:
 
 ⚡ COMMANDS
 
-/meetings - View all notes
-/meeting TITLE - View full notes
-/myactions - View your action items
-/actionitems - View all items (managers)
-/actionstatus - View status
-/postmeeting - Post new notes
+/newmeeting - Get meeting invitation template
+/meetings - View all meetings/notes
+/mymeetings - View meetings you're invited to
+/meeting <ID or title> - View meeting details
+/myactions - Your action items from meetings
+/actionitems - All action items (managers)
+/actionstatus - View action item status
+/postmeeting - Get meeting notes template
+/cancelmeeting MTG-XXXX-XX - Cancel a meeting
 
 👑 FOR ORGANIZERS
 

@@ -9,7 +9,7 @@ async def migrate_up(db_adapter):
     """Apply migration - add task dependencies table."""
     try:
         # Create task_dependencies table
-        await db_adapter.execute("""
+        await db_adapter.conn.execute("""
             CREATE TABLE IF NOT EXISTS task_dependencies (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 ticket TEXT NOT NULL,
@@ -23,12 +23,12 @@ async def migrate_up(db_adapter):
         """)
         
         # Create indexes
-        await db_adapter.execute("""
+        await db_adapter.conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_task_dependencies_ticket 
             ON task_dependencies(ticket)
         """)
         
-        await db_adapter.execute("""
+        await db_adapter.conn.execute("""
             CREATE INDEX IF NOT EXISTS idx_task_dependencies_blocked_by 
             ON task_dependencies(blocked_by_ticket)
         """)
@@ -44,7 +44,7 @@ async def migrate_up(db_adapter):
 async def migrate_down(db_adapter):
     """Rollback migration - drop task_dependencies table."""
     try:
-        await db_adapter.execute("DROP TABLE IF EXISTS task_dependencies")
+        await db_adapter.conn.execute("DROP TABLE IF EXISTS task_dependencies")
         logger.info("✅ Migration 008 rollback: task_dependencies table dropped")
         return True
         

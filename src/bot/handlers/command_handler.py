@@ -1605,9 +1605,128 @@ async def cmd_newqa(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await process_newqa_direct(update, context, ticket, asset, user_id, username, reviewer_username)
         return
     
-    # MODE 2: Reply to task message
+    # MODE 2: Reply to task message OR just /newqa in QA topic
+    
+    # Check if this is just "/newqa" without any arguments in QA topic
+    if message_text.strip() == "/newqa" and topic_id == config.TOPIC_QA_REVIEW:
+        
+        # Delete the command message
+        try:
+            await update.message.delete()
+        except:
+            pass
+        
+        # Get user's active tasks (STARTED state)
+        from src.data.models.task import TaskState
+        user_tasks = await task_service.task_repo.get_tasks_by_assignee(user_id)
+        started_tasks = [t for t in user_tasks if t.state == TaskState.STARTED]
+        
+        if not started_tasks:
+            # No tasks in STARTED state
+            await send_dm_with_autodelete(
+                context, user_id,
+                "❌ You don't have any tasks in STARTED state.\n\nPlease start a task first before submitting for QA review.",
+                20
+            )
+            return
+        
+        # Build clickable task links
+        group_id_str = str(config.TELEGRAM_GROUP_ID)
+        if group_id_str.startswith('-100'):
+            group_id_clean = group_id_str[4:]
+        else:
+            group_id_clean = group_id_str
+        
+        task_links = []
+        for t in started_tasks[:10]:
+            task_link = f"https://t.me/c/{group_id_clean}/{config.TOPIC_TASK_ALLOCATION}/{t.message_id}"
+            task_links.append(f"• [{t.ticket}]({task_link}) - {t.brand}")
+        
+        task_list = "\n".join(task_links)
+        
+        selector_msg = f"""📋 **Submit Work for QA Review**
+
+You have **{len(started_tasks)} task(s)** ready for QA submission:
+
+{task_list}
+
+**Choose your preferred method:**
+
+**Method 1: Reply to Task Message** _(Recommended)_
+1. Click on a ticket link above to open the task
+2. Reply to that task message with:
+   `/newqa <asset description> [@reviewer]`
+
+**Example:**
+`/newqa https://gsmaura.com/blog/post-title @reviewer`
+`/newqa Video thumbnail for homepage`
+`/newqa Follow the attached file`
+
+**Method 2: Direct Command Here**
+Type in this QA topic:
+`/newqa #TICKET <asset> [@reviewer]`
+
+**Example:**
+`/newqa #{started_tasks[0].ticket} https://link.com @reviewer`
+
+**Method 3: Custom Template**
+Copy, fill, and send in this QA topic:
+```
+/newqa #TICKET
+Asset: [your link or description]
+@reviewer (optional)
+```
+
+**Notes:**
+• Replace `<asset>` with your work link or description
+• Reviewer mention is optional
+• You can attach files when replying to task
+
+_This message will auto-delete in 90 seconds_"""
+        
+        try:
+            sent_msg = await context.bot.send_message(
+                chat_id=user_id,
+                text=selector_msg,
+                parse_mode='Markdown',
+                disable_web_page_preview=True
+            )
+            logger.info(f"Sent QA submission guide to DM for user {user_id}")
+            
+            # Auto-delete after 90 seconds
+            async def delete_dm():
+                await asyncio.sleep(90)
+                try:
+                    await sent_msg.delete()
+                except:
+                    pass
+            asyncio.create_task(delete_dm())
+        except Exception as e:
+            logger.error(f"Failed to send DM to user {user_id}: {e}")
+        return
+    
     if not update.message.reply_to_message:
-        help_msg = """📋 **Submit for QA Review**
+        # Check if user is in QA & Review topic - allow direct submission there
+        if topic_id == config.TOPIC_QA_REVIEW:
+            # User wants to submit QA directly in QA topic without ticket
+            # Prompt them to provide ticket
+            help_msg = """📋 **Submit QA Directly**
+
+Please use one of these formats:
+
+**1. With ticket in command:**
+`/newqa #TICKET <asset> [@reviewer]`
+
+**Example:**
+• `/newqa #POV260406 https://link.com @reviewer`
+
+**2. Or reply to your task message with:**
+`/newqa <asset description> [@reviewer]`
+
+_This message will auto-delete in 30 seconds_"""
+        else:
+            # User is in another topic - show full help
+            help_msg = """📋 **Submit for QA Review**
 
 **Usage:**
 
@@ -1806,9 +1925,9 @@ _Reviewers: React 👍 to claim, ❤️ to approve, or 👎 to reject._"""
         await qa_repo.create_submission(submission)
         
         # Update task state to QA_SUBMITTED
-        from src.core.state.state_engine import StateEngine
-        state_engine = StateEngine(context.bot_data.get('task_repository'))
-        await state_engine.process_qa_submission(ticket, submission.submitted_at)
+        task_service = context.bot_data.get('task_service')
+        if task_service and task_service.state_engine:
+            await task_service.state_engine.process_qa_submission(ticket, submission.submitted_at)
         
         logger.info(f"Created QA submission for task {ticket}")
         
@@ -1991,9 +2110,9 @@ _Reviewers: React 👍 to claim, ❤️ to approve, or 👎 to reject._"""
         await qa_repo.create_submission(submission)
         
         # Update task state to QA_SUBMITTED
-        from src.core.state.state_engine import StateEngine
-        state_engine = StateEngine(context.bot_data.get('task_repository'))
-        await state_engine.process_qa_submission(ticket, submission.submitted_at)
+        task_service = context.bot_data.get('task_service')
+        if task_service and task_service.state_engine:
+            await task_service.state_engine.process_qa_submission(ticket, submission.submitted_at)
         
         logger.info(f"Created QA submission for task {ticket}")
         
@@ -3952,6 +4071,7 @@ async def cmd_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message += "`/newqa` - Submit work for QA\n"
     message += "`/myqa` - Your QA submissions\n"
     message += "`/qa <ticket>` - QA details\n"
+    message += "`/qahelp` - QA quick reference guide\n"
     if is_qa_reviewer or is_privileged:
         message += "`/pendingqa` - All pending QA (QA/Admin)\n"
         message += "`/reviewingqa` - QA you're reviewing (QA/Admin)\n"
@@ -3966,7 +4086,8 @@ async def cmd_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message += "`/checkout` - Manual check-out\n"
     message += "`/break` - Start a break\n"
     message += "`/recheckin` - End break (resume work)\n"
-    message += "`/myattendance` - Your attendance history\n\n"
+    message += "`/myattendance` - Your attendance history\n"
+    message += "`/mybreaks` - Today's break history\n\n"
     
     # ===== LEAVE REQUEST COMMANDS (All Users) =====
     message += "**🏖️ LEAVE REQUESTS**\n"
@@ -3977,6 +4098,25 @@ async def cmd_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if is_privileged:
         message += "`/pendingleave` - Pending requests (Admin/Manager)\n"
     message += "\n"
+    
+    # ===== MEETING COMMANDS (All Users) =====
+    message += "**📅 MEETING MANAGEMENT**\n"
+    message += "`/newmeeting` - Get meeting invitation template\n"
+    message += "`/meetings` - View all upcoming meetings\n"
+    message += "`/mymeetings` - Meetings you're invited to\n"
+    message += "`/meeting <ID or title>` - View meeting details\n"
+    message += "`/myactions` - Your action items from meetings\n"
+    message += "`/actionstatus` - View action item status\n"
+    message += "`/postmeeting` - Get meeting notes template\n"
+    if is_privileged:
+        message += "`/actionitems` - All action items (Admin/Manager)\n"
+        message += "`/cancelmeeting <ID>` - Cancel meeting (Organizer/Admin)\n"
+    message += "\n"
+    message += "**Meeting RSVP:** React to meeting invitations:\n"
+    message += "  👍 - I will attend\n"
+    message += "  ❤️ - I will attend and I'm prepared\n"
+    message += "  👎 - I cannot attend\n"
+    message += "  🔥 - I have an urgent conflict\n\n"
     
     # ===== TASK ROUTING & ASSIGNMENT (Privileged) =====
     if is_privileged:
@@ -4008,6 +4148,7 @@ async def cmd_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # ===== INFORMATION & HELP (All Users) =====
     message += "**ℹ️ INFORMATION & HELP** (All Users)\n"
+    message += "`/start` - Welcome message\n"
     message += "`/help` - General help & overview\n"
     message += "`/taskhelp` - Task allocation guide\n"
     message += "`/brand` - Available brands\n"
@@ -4554,12 +4695,18 @@ async def handle_newtask_selection(update: Update, context: ContextTypes.DEFAULT
         logger.warning(f"Failed to delete newtask selection message: {e}")
     
     # Send the template with auto-delete warning
-    instruction = f"📋 **Copy this for Task Creation**\n\n"
-    instruction += f"👇 **Copy the text below:**\n"
+    instruction = f"📋 **Task Template Ready**\n\n"
+    instruction += f"✏️ **Add/Edit/Modify the fields below, then post in Task Allocation topic:**\n\n"
+    instruction += f"👇 **Copy & customize this template:**\n"
     instruction += f"```\n{template}\n```\n\n"
-    instruction += f"📝 **Instructions:**\n"
+    instruction += f"📝 **Fill in these fields:**\n"
     instruction += get_field_help_text(TASK_ALLOCATION_TEMPLATE) + "\n\n"
-    instruction += f"_Ticket {generated_ticket} is pre-generated and unique!_"
+    instruction += f"💡 **Tips:**\n"
+    instruction += f"• Ticket `{generated_ticket}` is pre-generated\n"
+    instruction += f"• Deadline example is provided (today 10:30 PM)\n"
+    instruction += f"• Modify deadline or leave as-is\n"
+    instruction += f"• Remove [DEADLINE] line if not needed\n\n"
+    instruction += f"_This message will auto-delete in 20 seconds_"
     
     await send_auto_delete_message(
         context=context,
@@ -4641,29 +4788,31 @@ async def handle_pin_selection(update: Update, context: ContextTypes.DEFAULT_TYP
     if pin_option == "default":
         # Pin default guide for this topic
         topic_id = query.message.message_thread_id if query.message.is_topic_message else None
-        default_file = 'docs/GUIDE_TASK_ALLOCATION.txt'  # Fallback
+        default_file = 'docs/GUIDE_STRATEGIC_LOUNGE.txt'  # Fallback for general chat
         
         # Map topics to their guide files
-        if topic_id == config.TOPIC_TASK_ALLOCATION:
+        if topic_id == config.TOPIC_STRATEGIC_LOUNGE:
+            default_file = 'docs/GUIDE_STRATEGIC_LOUNGE.txt'
+        elif topic_id == config.TOPIC_OFFICIAL_DIRECTIVES:
+            default_file = 'docs/GUIDE_OFFICIAL_DIRECTIVES.txt'
+        elif topic_id == config.TOPIC_BRAND_REPOSITORY:
+            default_file = 'docs/GUIDE_BRAND_REPOSITORY.txt'
+        elif topic_id == config.TOPIC_TASK_ALLOCATION:
             default_file = 'docs/GUIDE_TASK_ALLOCATION.txt'
         elif topic_id == config.TOPIC_CORE_OPERATIONS:
             default_file = 'docs/GUIDE_CORE_OPERATIONS.txt'
         elif topic_id == config.TOPIC_QA_REVIEW:
             default_file = 'docs/GUIDE_QA_REVIEW.txt'
-        elif topic_id == config.TOPIC_ATTENDANCE_LEAVE:
-            default_file = 'docs/GUIDE_ATTENDANCE_LEAVE.txt'
-        elif topic_id == config.TOPIC_OFFICIAL_DIRECTIVES:
-            default_file = 'docs/GUIDE_OFFICIAL_DIRECTIVES.txt'
-        elif topic_id == config.TOPIC_BRAND_REPOSITORY:
-            default_file = 'docs/GUIDE_BRAND_REPOSITORY.txt'
         elif topic_id == config.TOPIC_CENTRAL_ARCHIVE:
             default_file = 'docs/GUIDE_CENTRAL_ARCHIVE.txt'
         elif topic_id == config.TOPIC_DAILY_SYNC:
             default_file = 'docs/GUIDE_DAILY_SYNC.txt'
+        elif topic_id == config.TOPIC_ATTENDANCE_LEAVE:
+            default_file = 'docs/GUIDE_ATTENDANCE_LEAVE.txt'
+        elif topic_id == config.TOPIC_BOARDROOM:
+            default_file = 'docs/GUIDE_BOARDROOM.txt'
         elif topic_id == config.TOPIC_ADMIN_CONTROL_PANEL:
             default_file = 'docs/GUIDE_ADMIN_CONTROL_PANEL.txt'
-        elif topic_id == config.TOPIC_STRATEGIC_LOUNGE:
-            default_file = 'docs/GUIDE_STRATEGIC_LOUNGE.txt'
         
         try:
             with open(default_file, 'r', encoding='utf-8') as f:
@@ -6251,6 +6400,7 @@ def setup_command_handlers(application: Application, config: Config):
     application.add_handler(CommandHandler("approve", cmd_approve))
     application.add_handler(CommandHandler("reject", cmd_reject))
     application.add_handler(CommandHandler("reopenqa", cmd_reopenqa))
+    application.add_handler(CommandHandler("qahelp", cmd_qahelp))
     
     # Task management commands
     application.add_handler(CommandHandler("cleantasks", cmd_cleantasks))
@@ -6267,6 +6417,7 @@ def setup_command_handlers(application: Application, config: Config):
     application.add_handler(CommandHandler("break", cmd_break))
     application.add_handler(CommandHandler("recheckin", cmd_recheckin))
     application.add_handler(CommandHandler("myattendance", cmd_myattendance))
+    application.add_handler(CommandHandler("mybreaks", cmd_mybreaks))
     application.add_handler(CommandHandler("attendance", cmd_attendance))
     application.add_handler(CommandHandler("attendancedetails", cmd_attendancedetails))
     
@@ -6291,6 +6442,17 @@ def setup_command_handlers(application: Application, config: Config):
     application.add_handler(CommandHandler("requestleave", cmd_requestleave))
     application.add_handler(CommandHandler("myleave", cmd_myleave))
     application.add_handler(CommandHandler("pendingleave", cmd_pendingleave))
+    
+    # Meeting commands
+    application.add_handler(CommandHandler("newmeeting", cmd_newmeeting))
+    application.add_handler(CommandHandler("meetings", cmd_meetings))
+    application.add_handler(CommandHandler("mymeetings", cmd_mymeetings))
+    application.add_handler(CommandHandler("cancelmeeting", cmd_cancelmeeting))
+    application.add_handler(CommandHandler("myactions", cmd_myactions))
+    application.add_handler(CommandHandler("actionitems", cmd_actionitems))
+    application.add_handler(CommandHandler("meeting", cmd_meeting))
+    application.add_handler(CommandHandler("actionstatus", cmd_actionstatus))
+    application.add_handler(CommandHandler("postmeeting", cmd_postmeeting))
     
     # Add callback handlers for button selections
     application.add_handler(CallbackQueryHandler(handle_brand_selection, pattern="^brand:"))
@@ -6363,7 +6525,7 @@ async def cmd_cleantasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Show current status and offer cleanup
             active_tasks = [
                 t for t in all_user_tasks 
-                if t.state not in [TaskState.APPROVED, TaskState.ARCHIVED, TaskState.INACTIVE]
+                if t.state not in [TaskState.APPROVED, TaskState.COMPLETED, TaskState.ARCHIVED, TaskState.INACTIVE]
             ]
             
             response = f"📋 **Task Cleanup Report**\n\n"
@@ -7130,7 +7292,7 @@ async def cmd_overduetasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if hasattr(task, 'deadline') and task.deadline:
                 try:
                     deadline = datetime.fromisoformat(task.deadline)
-                    if deadline < datetime.now() and task.state not in [TaskState.APPROVED, TaskState.ARCHIVED]:
+                    if deadline < datetime.now() and task.state not in [TaskState.APPROVED, TaskState.COMPLETED, TaskState.ARCHIVED]:
                         overdue_tasks.append(task)
                 except:
                     pass
@@ -8130,3 +8292,1139 @@ async def cmd_workload(update: Update, context: ContextTypes.DEFAULT_TYPE):
             delete_after_seconds=15,
             warning_text=True
         )
+
+
+
+async def cmd_meetings(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /meetings command - show upcoming meetings."""
+    user_id = update.message.from_user.id
+    meeting_service = context.bot_data.get('meeting_service')
+    config = context.bot_data.get('config')
+    
+    # Delete command message
+    try:
+        await update.message.delete()
+    except:
+        pass
+    
+    if not meeting_service:
+        return
+    
+    try:
+        from datetime import datetime
+        
+        # Get all upcoming meetings
+        now = datetime.now()
+        all_meetings = await meeting_service.meeting_repo.get_meetings_after_date(now)
+        
+        if not all_meetings:
+            await send_auto_delete_message(
+                context=context,
+                chat_id=update.message.chat_id,
+                text="📭 No upcoming meetings scheduled",
+                parse_mode='Markdown',
+                message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+                delete_after_seconds=15
+            )
+            return
+        
+        # Build response
+        response = f"📅 **Upcoming Meetings** ({len(all_meetings)})\n\n"
+        
+        for meeting in all_meetings[:10]:  # Show max 10
+            date_str = meeting.date.strftime("%Y-%m-%d %H:%M")
+            priority_emoji = {
+                "LOW": "🟢",
+                "MEDIUM": "🟡",
+                "HIGH": "🟠",
+                "URGENT": "🔴"
+            }.get(meeting.priority.value, "📋")
+            
+            # Get organizer
+            user_repo = context.bot_data.get('user_repository')
+            organizer = await user_repo.get_user(meeting.organizer_id)
+            organizer_name = f"@{organizer.username}" if organizer and organizer.username else f"User {meeting.organizer_id}"
+            
+            # Build link
+            from src.utils.link_builder import build_message_link
+            meeting_link = build_message_link(config.TELEGRAM_GROUP_ID, meeting.message_id)
+            
+            response += f"{priority_emoji} <a href='{meeting_link}'>#{meeting.meeting_id}</a> - {meeting.title}\n"
+            response += f"📅 {date_str} | ⏱️ {meeting.duration_minutes}min\n"
+            response += f"👤 {organizer_name}\n\n"
+        
+        await send_auto_delete_message(
+            context=context,
+            chat_id=update.message.chat_id,
+            text=response,
+            parse_mode='HTML',
+            message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+            delete_after_seconds=30
+        )
+        
+    except Exception as e:
+        logger.error(f"Error in /meetings command: {e}", exc_info=True)
+
+
+async def cmd_mymeetings(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /mymeetings command - show user's invited meetings."""
+    user_id = update.message.from_user.id
+    username = update.message.from_user.username or update.message.from_user.first_name
+    meeting_service = context.bot_data.get('meeting_service')
+    config = context.bot_data.get('config')
+    
+    # Delete command message
+    try:
+        await update.message.delete()
+    except:
+        pass
+    
+    if not meeting_service:
+        return
+    
+    try:
+        # Get user's upcoming meetings
+        meetings = await meeting_service.get_user_upcoming_meetings(user_id)
+        
+        if not meetings:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text="📭 You have no upcoming meetings",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Build response
+        response = f"📅 **Your Upcoming Meetings** ({len(meetings)})\n\n"
+        
+        for meeting in meetings:
+            date_str = meeting.date.strftime("%Y-%m-%d %H:%M")
+            priority_emoji = {
+                "LOW": "🟢",
+                "MEDIUM": "🟡",
+                "HIGH": "🟠",
+                "URGENT": "🔴"
+            }.get(meeting.priority.value, "📋")
+            
+            # Get RSVP status
+            status = await meeting_service.meeting_repo.get_attendee_status(meeting.meeting_id, user_id)
+            status_emoji = {
+                "INVITED": "❓",
+                "ATTENDING": "✅",
+                "ATTENDING_PREPARED": "❤️",
+                "CANNOT_ATTEND": "❌",
+                "URGENT_CONFLICT": "🔥"
+            }.get(status.value if status else "INVITED", "❓")
+            
+            # Build link
+            from src.utils.link_builder import build_message_link
+            meeting_link = build_message_link(config.TELEGRAM_GROUP_ID, meeting.message_id)
+            
+            response += f"{priority_emoji} <a href='{meeting_link}'>#{meeting.meeting_id}</a> - {meeting.title}\n"
+            response += f"📅 {date_str} | ⏱️ {meeting.duration_minutes}min\n"
+            response += f"RSVP: {status_emoji}\n\n"
+        
+        response += "\n_⏱️ This message will auto-delete in 60 seconds_"
+        
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=response,
+            parse_mode='HTML',
+            disable_web_page_preview=True
+        )
+        
+    except Exception as e:
+        logger.error(f"Error in /mymeetings command: {e}", exc_info=True)
+
+
+async def cmd_cancelmeeting(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /cancelmeeting command - cancel a meeting."""
+    user_id = update.message.from_user.id
+    meeting_service = context.bot_data.get('meeting_service')
+    config = context.bot_data.get('config')
+    
+    # Delete command message
+    try:
+        await update.message.delete()
+    except:
+        pass
+    
+    if not meeting_service:
+        return
+    
+    # Parse command: /cancelmeeting MTG-2605-01 Reason here
+    try:
+        parts = update.message.text.split(maxsplit=2)
+        if len(parts) < 3:
+            await send_auto_delete_message(
+                context=context,
+                chat_id=update.message.chat_id,
+                text="❌ **Usage:** `/cancelmeeting MTG-YYMM-XX Reason`\n\nExample: `/cancelmeeting MTG-2605-01 Organizer unavailable`",
+                parse_mode='Markdown',
+                message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+                delete_after_seconds=15
+            )
+            return
+        
+        meeting_id = parts[1].replace('#', '')
+        reason = parts[2]
+        
+        # Get meeting
+        meeting = await meeting_service.get_meeting(meeting_id)
+        if not meeting:
+            await send_auto_delete_message(
+                context=context,
+                chat_id=update.message.chat_id,
+                text=f"❌ Meeting not found: {meeting_id}",
+                parse_mode='Markdown',
+                message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+                delete_after_seconds=15
+            )
+            return
+        
+        # Check if user is organizer or admin
+        is_admin = user_id in (config.ADMINISTRATORS + config.MANAGERS + config.OWNERS)
+        if user_id != meeting.organizer_id and not is_admin:
+            await send_auto_delete_message(
+                context=context,
+                chat_id=update.message.chat_id,
+                text="❌ Only the organizer or admins can cancel meetings",
+                parse_mode='Markdown',
+                message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+                delete_after_seconds=15
+            )
+            return
+        
+        # Cancel meeting
+        success = await meeting_service.cancel_meeting(meeting_id, user_id, reason)
+        
+        if success:
+            await send_auto_delete_message(
+                context=context,
+                chat_id=update.message.chat_id,
+                text=f"✅ Meeting **{meeting_id}** cancelled\n\nAll attendees have been notified.",
+                parse_mode='Markdown',
+                message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+                delete_after_seconds=15
+            )
+        else:
+            await send_auto_delete_message(
+                context=context,
+                chat_id=update.message.chat_id,
+                text=f"❌ Failed to cancel meeting",
+                parse_mode='Markdown',
+                message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+                delete_after_seconds=15
+            )
+        
+    except Exception as e:
+        logger.error(f"Error in /cancelmeeting command: {e}", exc_info=True)
+
+
+
+async def cmd_newmeeting(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /newmeeting command - send meeting invitation template."""
+    user_id = update.message.from_user.id
+    username = update.message.from_user.username or update.message.from_user.first_name
+    meeting_service = context.bot_data.get('meeting_service')
+    config = context.bot_data.get('config')
+    
+    # Delete command message
+    try:
+        await update.message.delete()
+    except:
+        pass
+    
+    try:
+        from datetime import datetime, timedelta
+        
+        # Generate next meeting ID (or use placeholder if service not available)
+        if meeting_service:
+            try:
+                meeting_id = await meeting_service.generate_meeting_id()
+            except Exception as e:
+                logger.warning(f"Could not generate meeting ID: {e}")
+                # Fallback to manual format
+                now = datetime.now()
+                year_month = now.strftime("%y%m")
+                meeting_id = f"MTG-{year_month}-XX"
+        else:
+            # Fallback if service not initialized
+            now = datetime.now()
+            year_month = now.strftime("%y%m")
+            meeting_id = f"MTG-{year_month}-XX"
+        
+        # Get tomorrow's date as default
+        tomorrow = datetime.now() + timedelta(days=1)
+        default_date = tomorrow.strftime("%Y-%m-%d")
+        default_time = "14:00 - 15:30 GMT+6"
+        
+        # Build template with pre-filled meeting ID
+        template = f"""📋 **Meeting Invitation Template**
+
+Copy this template and post it in the **BOARDROOM** topic:
+
+```
+[MEETING_ID] {meeting_id}
+[MEETING_INVITE] Your Meeting Title Here
+[DATE] {default_date}
+[TIME] {default_time}
+[DURATION] 1.5 hours
+[LOCATION] Zoom link or physical location
+[ORGANIZER] @{username}
+[ATTENDEES] @allactives
+[AGENDA]
+• Topic 1
+• Topic 2
+• Topic 3
+[PREPARATION] What attendees should prepare (optional)
+[PRIORITY] MEDIUM
+```
+
+**Meeting ID:** `{meeting_id}` _(auto-generated)_
+_Leave blank or use this ID. System will auto-correct if duplicate._
+
+**Special Attendee Groups:**
+• `@all` - Everyone (including on leave)
+• `@allactives` - Active users only
+• `@employees` - All employees
+• `@activeemployees` - Active employees only
+• `@admins` - All administrators
+• `@managers` - All managers
+• `@owners` - All owners
+
+**Priority Levels:**
+• `LOW` - Regular meeting
+• `MEDIUM` - Important meeting
+• `HIGH` - Very important
+• `URGENT` - Critical meeting
+
+**Tips:**
+✓ Post in BOARDROOM topic
+✓ Meeting ID will be auto-corrected if duplicate
+✓ Use special groups for large meetings
+✓ Include preparation requirements
+
+_⏱️ This message will auto-delete in 120 seconds_"""
+        
+        # Send to user's DM
+        sent_msg = await context.bot.send_message(
+            chat_id=user_id,
+            text=template,
+            parse_mode='Markdown'
+        )
+        
+        # Schedule auto-delete
+        async def delete_after_delay():
+            await asyncio.sleep(120)
+            try:
+                await sent_msg.delete()
+            except:
+                pass
+        
+        asyncio.create_task(delete_after_delay())
+        
+        logger.info(f"✅ Sent meeting template to user {user_id}")
+        
+    except Exception as e:
+        logger.error(f"Error in /newmeeting command: {e}", exc_info=True)
+        try:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=f"❌ **Error:** Could not generate meeting template.\n\n**Details:** {str(e)}\n\nPlease contact an administrator.",
+                parse_mode='Markdown'
+            )
+        except Exception as dm_error:
+            logger.error(f"Could not send error DM: {dm_error}")
+            # Try sending to group as fallback
+            try:
+                await send_auto_delete_message(
+                    context=context,
+                    chat_id=update.message.chat_id,
+                    text=f"❌ Could not send meeting template to your DM. Please check if you've started a chat with the bot.",
+                    parse_mode='Markdown',
+                    message_thread_id=update.message.message_thread_id if update.message.is_topic_message else None,
+                    delete_after_seconds=15
+                )
+            except:
+                pass
+
+
+async def cmd_myactions(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /myactions command - view your action items from meetings."""
+    user_id = update.message.from_user.id
+    username = update.message.from_user.username or update.message.from_user.first_name
+    meeting_repo = context.bot_data.get('meeting_service').meeting_repo if context.bot_data.get('meeting_service') else None
+    
+    # Delete command message
+    try:
+        await update.message.delete()
+    except:
+        pass
+    
+    if not meeting_repo:
+        return
+    
+    try:
+        # Get all meeting notes
+        from src.data.adapters.sqlite_adapter import SQLiteAdapter
+        db_adapter = context.bot_data.get('db_adapter')
+        
+        if not db_adapter:
+            return
+        
+        # Query all meeting notes
+        async with db_adapter.conn.execute("""
+            SELECT * FROM meeting_notes 
+            ORDER BY posted_at DESC
+        """) as cursor:
+            notes_rows = await cursor.fetchall()
+        
+        if not notes_rows:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text="📋 **Your Action Items**\n\nNo action items found.\n\n_Post meeting notes in BOARDROOM to track action items_",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Parse action items and filter for this user
+        user_actions = []
+        
+        for row in notes_rows:
+            action_items_text = row['action_items']
+            meeting_id = row['meeting_id']
+            posted_at = row['posted_at']
+            
+            # Parse action items - format: • @user - Task description - Due: YYYY-MM-DD
+            lines = action_items_text.split('\n')
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                
+                # Check if this action item is assigned to current user
+                if f'@{username}' in line.lower() or f'@{user_id}' in line:
+                    user_actions.append({
+                        'meeting_id': meeting_id,
+                        'action': line,
+                        'posted_at': posted_at
+                    })
+        
+        if not user_actions:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=f"📋 **Your Action Items**\n\nNo action items assigned to @{username}\n\n_Action items from meeting notes will appear here_",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Build message
+        message = f"📋 **Your Action Items** (@{username})\n\n"
+        message += f"Found {len(user_actions)} action item(s):\n\n"
+        
+        for idx, action in enumerate(user_actions[:20], 1):  # Limit to 20
+            meeting_id = action['meeting_id']
+            action_text = action['action'].replace('•', '').strip()
+            
+            message += f"**{idx}. Meeting:** {meeting_id}\n"
+            message += f"   {action_text}\n\n"
+        
+        if len(user_actions) > 20:
+            message += f"\n_...and {len(user_actions) - 20} more action items_\n"
+        
+        message += "\n💡 **Tips:**\n"
+        message += "• React to meeting notes with 👍 to acknowledge\n"
+        message += "• React with ❤️ when completed\n"
+        message += "• React with 👎 if blocked\n"
+        
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=message,
+            parse_mode='Markdown'
+        )
+        
+        logger.info(f"✅ Sent action items to user {user_id}")
+        
+    except Exception as e:
+        logger.error(f"Error in /myactions command: {e}", exc_info=True)
+        try:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=f"❌ **Error:** Could not retrieve action items.\n\nPlease try again later.",
+                parse_mode='Markdown'
+            )
+        except:
+            pass
+
+
+async def cmd_actionitems(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /actionitems command - view all action items (managers only)."""
+    user_id = update.message.from_user.id
+    config = context.bot_data.get('config')
+    meeting_repo = context.bot_data.get('meeting_service').meeting_repo if context.bot_data.get('meeting_service') else None
+    
+    # Delete command message
+    try:
+        await update.message.delete()
+    except:
+        pass
+    
+    # Check if user is privileged
+    is_privileged = user_id in (config.ADMINISTRATORS + config.MANAGERS + config.OWNERS) if config else False
+    
+    if not is_privileged:
+        await context.bot.send_message(
+            chat_id=user_id,
+            text="❌ **Access Denied**\n\nThis command is only available to administrators and managers.",
+            parse_mode='Markdown'
+        )
+        return
+    
+    if not meeting_repo:
+        return
+    
+    try:
+        # Get all meeting notes
+        from src.data.adapters.sqlite_adapter import SQLiteAdapter
+        db_adapter = context.bot_data.get('db_adapter')
+        
+        if not db_adapter:
+            return
+        
+        # Query all meeting notes
+        async with db_adapter.conn.execute("""
+            SELECT * FROM meeting_notes 
+            ORDER BY posted_at DESC
+            LIMIT 50
+        """) as cursor:
+            notes_rows = await cursor.fetchall()
+        
+        if not notes_rows:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text="📋 **All Action Items**\n\nNo action items found.\n\n_Post meeting notes in BOARDROOM to track action items_",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Parse all action items
+        all_actions = []
+        
+        for row in notes_rows:
+            action_items_text = row['action_items']
+            meeting_id = row['meeting_id']
+            posted_at = row['posted_at']
+            
+            # Parse action items
+            lines = action_items_text.split('\n')
+            for line in lines:
+                line = line.strip()
+                if not line or not line.startswith('•'):
+                    continue
+                
+                all_actions.append({
+                    'meeting_id': meeting_id,
+                    'action': line,
+                    'posted_at': posted_at
+                })
+        
+        if not all_actions:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text="📋 **All Action Items**\n\nNo action items found in recent meetings.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Build message
+        message = "📋 **All Action Items** (Recent Meetings)\n\n"
+        message += f"Found {len(all_actions)} action item(s):\n\n"
+        
+        for idx, action in enumerate(all_actions[:30], 1):  # Limit to 30
+            meeting_id = action['meeting_id']
+            action_text = action['action'].replace('•', '').strip()
+            
+            message += f"**{idx}. {meeting_id}**\n"
+            message += f"   {action_text}\n\n"
+        
+        if len(all_actions) > 30:
+            message += f"\n_...and {len(all_actions) - 30} more action items_\n"
+        
+        message += "\n💡 **Tip:** Use `/myactions` to see your own action items\n"
+        
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=message,
+            parse_mode='Markdown'
+        )
+        
+        logger.info(f"✅ Sent all action items to admin {user_id}")
+        
+    except Exception as e:
+        logger.error(f"Error in /actionitems command: {e}", exc_info=True)
+        try:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=f"❌ **Error:** Could not retrieve action items.\n\nPlease try again later.",
+                parse_mode='Markdown'
+            )
+        except:
+            pass
+
+
+
+async def cmd_meeting(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /meeting command - view specific meeting details."""
+    user_id = update.message.from_user.id
+    meeting_service = context.bot_data.get('meeting_service')
+    config = context.bot_data.get('config')
+    
+    # Delete command message
+    try:
+        await update.message.delete()
+    except:
+        pass
+    
+    if not meeting_service:
+        return
+    
+    try:
+        # Parse command: /meeting MTG-2605-01 or /meeting title
+        parts = update.message.text.split(maxsplit=1)
+        if len(parts) < 2:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text="❌ **Usage:** `/meeting <ID or title>`\n\nExamples:\n• `/meeting MTG-2605-01`\n• `/meeting Q2 Planning`",
+                parse_mode='Markdown'
+            )
+            return
+        
+        search_term = parts[1].strip()
+        
+        # Check if it's a meeting ID
+        import re
+        if re.match(r'^MTG-?\d{4}-?\d{2}$', search_term.replace('#', '')):
+            meeting_id = search_term.replace('#', '').replace('MTG', 'MTG-')
+            if not '-' in meeting_id[4:]:
+                # Format: MTG260501 -> MTG-2605-01
+                meeting_id = f"MTG-{meeting_id[3:7]}-{meeting_id[7:]}"
+            
+            meeting = await meeting_service.meeting_repo.get_meeting(meeting_id)
+            
+            if not meeting:
+                await context.bot.send_message(
+                    chat_id=user_id,
+                    text=f"❌ Meeting not found: {meeting_id}",
+                    parse_mode='Markdown'
+                )
+                return
+            
+            meetings = [meeting]
+        else:
+            # Search by title
+            db_adapter = context.bot_data.get('db_adapter')
+            async with db_adapter.conn.execute("""
+                SELECT * FROM meetings 
+                WHERE LOWER(title) LIKE LOWER(?)
+                ORDER BY date DESC
+                LIMIT 10
+            """, (f'%{search_term}%',)) as cursor:
+                rows = await cursor.fetchall()
+            
+            if not rows:
+                await context.bot.send_message(
+                    chat_id=user_id,
+                    text=f"❌ No meetings found matching: {search_term}",
+                    parse_mode='Markdown'
+                )
+                return
+            
+            # Convert rows to Meeting objects
+            from src.data.models.meeting import Meeting, MeetingStatus, MeetingPriority
+            meetings = []
+            for row in rows:
+                meeting = Meeting(
+                    meeting_id=row['meeting_id'],
+                    title=row['title'],
+                    date=datetime.fromisoformat(row['date']),
+                    duration_minutes=row['duration_minutes'],
+                    location=row['location'],
+                    organizer_id=row['organizer_id'],
+                    agenda=row['agenda'],
+                    priority=MeetingPriority(row['priority']),
+                    status=MeetingStatus(row['status']),
+                    created_at=datetime.fromisoformat(row['created_at']),
+                    message_id=row['message_id'],
+                    topic_id=row['topic_id'],
+                    preparation=row.get('preparation')
+                )
+                meetings.append(meeting)
+        
+        # Display meeting details
+        for meeting in meetings[:5]:  # Limit to 5 results
+            # Get organizer info
+            user_repo = context.bot_data.get('user_repository')
+            organizer = await user_repo.get_user(meeting.organizer_id) if user_repo else None
+            organizer_name = f"@{organizer.username}" if organizer and organizer.username else f"User {meeting.organizer_id}"
+            
+            # Get attendees
+            attendees = await meeting_service.meeting_repo.get_meeting_attendees(meeting.meeting_id)
+            
+            # Build message link
+            from src.utils.link_builder import build_message_link
+            meeting_link = build_message_link(config.TELEGRAM_GROUP_ID, meeting.message_id)
+            
+            # Priority emoji
+            priority_emoji = {
+                "LOW": "🟢",
+                "MEDIUM": "🟡",
+                "HIGH": "🟠",
+                "URGENT": "🔴"
+            }.get(meeting.priority.value, "📋")
+            
+            # Status emoji
+            status_emoji = {
+                "SCHEDULED": "📅",
+                "REMINDED": "⏰",
+                "IN_PROGRESS": "▶️",
+                "COMPLETED": "✅",
+                "CANCELLED": "❌",
+                "RESCHEDULED": "🔄"
+            }.get(meeting.status.value, "📋")
+            
+            message = f"{priority_emoji} **{meeting.title}**\n\n"
+            message += f"**Meeting ID:** {meeting.meeting_id}\n"
+            message += f"**Status:** {status_emoji} {meeting.status.value}\n"
+            message += f"**Date:** {meeting.date.strftime('%Y-%m-%d')}\n"
+            message += f"**Time:** {meeting.date.strftime('%H:%M')} ({meeting.duration_minutes} min)\n"
+            message += f"**Location:** {meeting.location}\n"
+            message += f"**Organizer:** {organizer_name}\n"
+            message += f"**Priority:** {meeting.priority.value}\n\n"
+            
+            message += f"**Attendees:** {len(attendees)} invited\n"
+            
+            # Show RSVP breakdown
+            attending = sum(1 for a in attendees if a.status.value in ['ATTENDING', 'ATTENDING_PREPARED'])
+            declined = sum(1 for a in attendees if a.status.value in ['CANNOT_ATTEND', 'URGENT_CONFLICT'])
+            pending = sum(1 for a in attendees if a.status.value == 'INVITED')
+            
+            message += f"  • ✅ Attending: {attending}\n"
+            message += f"  • ❌ Declined: {declined}\n"
+            message += f"  • ❓ Pending: {pending}\n\n"
+            
+            message += f"**Agenda:**\n{meeting.agenda[:200]}"
+            if len(meeting.agenda) > 200:
+                message += "..."
+            message += "\n\n"
+            
+            if meeting.preparation:
+                message += f"**Preparation:**\n{meeting.preparation[:150]}"
+                if len(meeting.preparation) > 150:
+                    message += "..."
+                message += "\n\n"
+            
+            message += f"[📎 View Full Details]({meeting_link})"
+            
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=message,
+                parse_mode='Markdown',
+                disable_web_page_preview=True
+            )
+        
+        if len(meetings) > 5:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=f"_...and {len(meetings) - 5} more meetings. Refine your search for better results._",
+                parse_mode='Markdown'
+            )
+        
+        logger.info(f"✅ Sent meeting details to user {user_id}")
+        
+    except Exception as e:
+        logger.error(f"Error in /meeting command: {e}", exc_info=True)
+        try:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=f"❌ **Error:** Could not retrieve meeting details.\n\nPlease try again later.",
+                parse_mode='Markdown'
+            )
+        except:
+            pass
+
+
+async def cmd_actionstatus(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /actionstatus command - view action item completion status."""
+    user_id = update.message.from_user.id
+    config = context.bot_data.get('config')
+    
+    # Delete command message
+    try:
+        await update.message.delete()
+    except:
+        pass
+    
+    try:
+        # Get all meeting notes with reactions
+        db_adapter = context.bot_data.get('db_adapter')
+        
+        if not db_adapter:
+            return
+        
+        # Query meeting notes
+        async with db_adapter.conn.execute("""
+            SELECT * FROM meeting_notes 
+            ORDER BY posted_at DESC
+            LIMIT 20
+        """) as cursor:
+            notes_rows = await cursor.fetchall()
+        
+        if not notes_rows:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text="📊 **Action Item Status**\n\nNo action items found.\n\n_Post meeting notes in BOARDROOM to track action items_",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Parse action items and check reactions
+        total_actions = 0
+        acknowledged = 0
+        in_progress = 0
+        completed = 0
+        blocked = 0
+        
+        action_details = []
+        
+        for row in notes_rows:
+            action_items_text = row['action_items']
+            meeting_id = row['meeting_id']
+            message_id = row['message_id']
+            
+            # Parse action items
+            lines = action_items_text.split('\n')
+            for line in lines:
+                line = line.strip()
+                if not line or not line.startswith('•'):
+                    continue
+                
+                total_actions += 1
+                
+                # Extract assignee
+                import re
+                assignee_match = re.search(r'@(\w+)', line)
+                assignee = assignee_match.group(1) if assignee_match else "Unknown"
+                
+                # For now, we'll track based on meeting notes message reactions
+                # In a full implementation, we'd track individual action item reactions
+                action_details.append({
+                    'meeting_id': meeting_id,
+                    'assignee': assignee,
+                    'action': line.replace('•', '').strip(),
+                    'status': 'PENDING'  # Default status
+                })
+        
+        # Build status message
+        message = "📊 **Action Item Status**\n\n"
+        message += f"**Overview:**\n"
+        message += f"• Total Action Items: {total_actions}\n"
+        message += f"• From {len(notes_rows)} recent meetings\n\n"
+        
+        message += "**Recent Action Items:**\n\n"
+        
+        for idx, action in enumerate(action_details[:15], 1):
+            meeting_id = action['meeting_id']
+            assignee = action['assignee']
+            action_text = action['action'][:80]
+            if len(action['action']) > 80:
+                action_text += "..."
+            
+            message += f"**{idx}. {meeting_id}** - @{assignee}\n"
+            message += f"   {action_text}\n"
+            message += f"   Status: ❓ Pending\n\n"
+        
+        if len(action_details) > 15:
+            message += f"_...and {len(action_details) - 15} more action items_\n\n"
+        
+        message += "💡 **How to Track Status:**\n"
+        message += "React to meeting notes messages:\n"
+        message += "• 👍 = Acknowledged\n"
+        message += "• 🔄 = In Progress\n"
+        message += "• ❤️ = Completed\n"
+        message += "• 👎 = Blocked\n"
+        
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=message,
+            parse_mode='Markdown'
+        )
+        
+        logger.info(f"✅ Sent action status to user {user_id}")
+        
+    except Exception as e:
+        logger.error(f"Error in /actionstatus command: {e}", exc_info=True)
+        try:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=f"❌ **Error:** Could not retrieve action status.\n\nPlease try again later.",
+                parse_mode='Markdown'
+            )
+        except:
+            pass
+
+
+
+async def cmd_mybreaks(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /mybreaks command - show today's break history."""
+    user_id = update.message.from_user.id
+    username = update.message.from_user.username or update.message.from_user.first_name
+    
+    # Delete command message
+    try:
+        await update.message.delete()
+    except:
+        pass
+    
+    try:
+        db_adapter = context.bot_data.get('db_adapter')
+        
+        if not db_adapter:
+            return
+        
+        # Get today's date
+        from datetime import date
+        today = date.today().isoformat()
+        
+        # Query today's breaks
+        async with db_adapter.conn.execute("""
+            SELECT * FROM break_records 
+            WHERE user_id = ? AND DATE(start_time) = ?
+            ORDER BY start_time DESC
+        """, (user_id, today)) as cursor:
+            breaks = await cursor.fetchall()
+        
+        if not breaks:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=f"☕ **Your Breaks Today**\n\nNo breaks recorded for today.\n\nUse `/break` to start a break and `/recheckin` to end it.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Build message
+        message = f"☕ **Your Breaks Today** - {today}\n\n"
+        
+        total_break_minutes = 0
+        
+        for idx, brk in enumerate(breaks, 1):
+            start_time = datetime.fromisoformat(brk['start_time'])
+            end_time = datetime.fromisoformat(brk['end_time']) if brk['end_time'] else None
+            duration = brk['duration_minutes'] if brk['duration_minutes'] else 0
+            
+            message += f"**Break {idx}:**\n"
+            message += f"  Started: {start_time.strftime('%H:%M')}\n"
+            
+            if end_time:
+                message += f"  Ended: {end_time.strftime('%H:%M')}\n"
+                message += f"  Duration: {duration} minutes\n"
+                total_break_minutes += duration
+            else:
+                message += f"  Status: 🔴 In Progress\n"
+            
+            message += "\n"
+        
+        message += f"**Total Break Time:** {total_break_minutes} minutes\n\n"
+        
+        # Check limits
+        config = context.bot_data.get('config')
+        if config:
+            max_break_time = config.ATTENDANCE_MAX_BREAK_TIME_MINUTES
+            max_break_count = config.ATTENDANCE_MAX_BREAK_COUNT
+            
+            if total_break_minutes > max_break_time:
+                message += f"⚠️ **Warning:** Exceeded max break time ({max_break_time} min)\n"
+            
+            if len(breaks) > max_break_count:
+                message += f"⚠️ **Warning:** Exceeded max break count ({max_break_count})\n"
+        
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=message,
+            parse_mode='Markdown'
+        )
+        
+        logger.info(f"✅ Sent break history to user {user_id}")
+        
+    except Exception as e:
+        logger.error(f"Error in /mybreaks command: {e}", exc_info=True)
+        try:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=f"❌ **Error:** Could not retrieve break history.\n\nPlease try again later.",
+                parse_mode='Markdown'
+            )
+        except:
+            pass
+
+
+async def cmd_postmeeting(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /postmeeting command - get meeting notes template."""
+    user_id = update.message.from_user.id
+    username = update.message.from_user.username or update.message.from_user.first_name
+    
+    # Delete command message
+    try:
+        await update.message.delete()
+    except:
+        pass
+    
+    try:
+        from datetime import date
+        today = date.today().strftime("%Y-%m-%d")
+        
+        template = f"""📝 **Meeting Notes Template**
+
+Copy this template and post it in the **BOARDROOM** topic:
+
+```
+[MEETING] Meeting Title [MTG-YYMM-XX]
+[DATE] {today}
+[TIME] HH:MM - HH:MM
+[ATTENDEES] @user1, @user2, @user3
+[AGENDA] What was discussed
+[DECISIONS]
+• Decision 1
+• Decision 2
+[ACTION_ITEMS]
+• @user1 - Task description - Due: YYYY-MM-DD
+• @user2 - Task description - Due: YYYY-MM-DD
+[NEXT_MEETING] YYYY-MM-DD (optional)
+```
+
+**Tips:**
+✓ Include meeting ID in title for tracking
+✓ List all attendees who were present
+✓ Be specific about decisions made
+✓ Assign action items to specific people
+✓ Include clear deadlines
+
+_⏱️ This message will auto-delete in 120 seconds_"""
+        
+        # Send to user's DM
+        sent_msg = await context.bot.send_message(
+            chat_id=user_id,
+            text=template,
+            parse_mode='Markdown'
+        )
+        
+        # Schedule auto-delete
+        async def delete_after_delay():
+            await asyncio.sleep(120)
+            try:
+                await sent_msg.delete()
+            except:
+                pass
+        
+        asyncio.create_task(delete_after_delay())
+        
+        logger.info(f"✅ Sent meeting notes template to user {user_id}")
+        
+    except Exception as e:
+        logger.error(f"Error in /postmeeting command: {e}", exc_info=True)
+        try:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=f"❌ **Error:** Could not generate meeting notes template.\n\nPlease try again later.",
+                parse_mode='Markdown'
+            )
+        except:
+            pass
+
+
+async def cmd_qahelp(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /qahelp command - QA quick reference guide."""
+    user_id = update.message.from_user.id
+    
+    # Delete command message
+    try:
+        await update.message.delete()
+    except:
+        pass
+    
+    try:
+        help_text = """✅ **QA REVIEW - QUICK REFERENCE**
+
+**📝 SUBMISSION FORMAT:**
+```
+[TICKET] POV260501
+[BRAND] #GSMAura
+[ASSET] Link to deliverable
+```
+
+**🔄 QA WORKFLOW:**
+
+**For Employees:**
+1. Complete task
+2. React 👍 to mark started
+3. Submit in QA Review topic
+4. Wait for review
+5. If ❤️ approved → Task complete!
+6. If 👎 rejected → Fix and resubmit
+
+**For QA Reviewers:**
+1. Check `/pendingqa` for submissions
+2. React 👍 to start review
+3. Check deliverables vs requirements
+4. React ❤️ to approve OR 👎 to reject
+5. If rejecting, reply with reason
+
+**⚡ COMMANDS:**
+• `/newqa` - Submit work for QA
+• `/myqa` - Your QA submissions
+• `/pendingqa` - Pending QA (reviewers)
+• `/qa <ticket>` - View QA details
+• `/approve <ticket>` - Approve (reviewers)
+• `/reject <ticket>` - Reject (reviewers)
+• `/reopenqa <ticket>` - Resubmit after rejection
+
+**👍 REACTIONS:**
+• 👍 = Review started
+• ❤️ = Approved
+• 👎 = Rejected
+
+**⏱️ TIMELINES:**
+• Review within 4 hours
+• Escalates if not reviewed
+
+_⏱️ This message will auto-delete in 120 seconds_"""
+        
+        # Send to user's DM
+        sent_msg = await context.bot.send_message(
+            chat_id=user_id,
+            text=help_text,
+            parse_mode='Markdown'
+        )
+        
+        # Schedule auto-delete
+        async def delete_after_delay():
+            await asyncio.sleep(120)
+            try:
+                await sent_msg.delete()
+            except:
+                pass
+        
+        asyncio.create_task(delete_after_delay())
+        
+        logger.info(f"✅ Sent QA help to user {user_id}")
+        
+    except Exception as e:
+        logger.error(f"Error in /qahelp command: {e}", exc_info=True)
+        try:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=f"❌ **Error:** Could not send QA help.\n\nPlease try again later.",
+                parse_mode='Markdown'
+            )
+        except:
+            pass

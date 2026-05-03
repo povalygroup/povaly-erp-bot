@@ -9,10 +9,12 @@ from telegram.ext import Application, MessageHandler, filters, ContextTypes
 
 from src.config import Config
 from src.core.parser.message_parser import MessageParser
+from src.core.parser.meeting_parser import MeetingParser
 from src.data.models.task import TaskState
 
 logger = logging.getLogger(__name__)
 parser = MessageParser()
+meeting_parser = MeetingParser()
 
 
 async def move_to_trash(context, message, reason="Deleted message", deleted_by=None, skip_db_sync=False):
@@ -438,6 +440,12 @@ If you believe you should have access to this topic, please contact an administr
         await handle_qa_review(update, text, user_id, username, message_id, qa_service, config, context)
     elif topic_id == config.TOPIC_CORE_OPERATIONS:
         await handle_core_operations(update, text, user_id, username, message_id, issue_service, config, context)
+    elif topic_id == config.TOPIC_BOARDROOM:
+        meeting_service = context.bot_data.get("meeting_service")
+        if meeting_service:
+            await handle_boardroom_meeting(update, text, user_id, username, message_id, meeting_service, config, context)
+        else:
+            logger.debug(f"Meeting service not initialized")
     else:
         logger.debug(f"Message in topic {topic_id} - no specific handler")
 
@@ -812,13 +820,24 @@ async def handle_task_allocation(update, text, user_id, username, message_id, ta
         await db_adapter.conn.commit()
         logger.info(f"💾 Pre-creation commit to ensure clean state")
         
+        # Parse deadline if provided
+        deadline_dt = None
+        if task_data.deadline:
+            from src.core.parser.message_parser import parse_deadline_string
+            deadline_dt = parse_deadline_string(task_data.deadline)
+            if deadline_dt:
+                logger.info(f"📅 Parsed deadline: {deadline_dt.strftime('%Y-%m-%d %H:%M')}")
+            else:
+                logger.warning(f"⚠️ Failed to parse deadline: {task_data.deadline}")
+        
         task = await task_service.create_task(
             ticket=task_data.ticket,
             brand=task_data.brand,
             assignee_id=primary_assignee_id,  # Use primary assignee
             creator_id=user_id,
             message_id=message_id,
-            topic_id=update.message.message_thread_id or 0
+            topic_id=update.message.message_thread_id or 0,
+            deadline=deadline_dt
         )
         
         if task:
@@ -1050,14 +1069,26 @@ async def _handle_duplicate_ticket(context, update, task_service, ticket_gen, ta
             
             logger.info(f"✅ Next available ticket: {new_ticket} (highest found: {max_serial})")
             
-            # Create task with the new ticket
+            # Parse deadline if provided
+            deadline_dt = None
+            if task_data.deadline:
+                from src.core.parser.message_parser import parse_deadline_string
+                deadline_dt = parse_deadline_string(task_data.deadline)
+                if deadline_dt:
+                    logger.info(f"📅 Parsed deadline: {deadline_dt.strftime('%Y-%m-%d %H:%M')}")
+                else:
+                    logger.warning(f"⚠️ Failed to parse deadline: {task_data.deadline}")
+            
+            # Create task with the new ticket (skip DM for now)
             task = await task_service.create_task(
                 ticket=new_ticket,
                 brand=task_data.brand,
                 assignee_id=assignee_id,  # Use the same assignee_id from above
                 creator_id=user_id,
                 message_id=message_id,
-                topic_id=update.message.message_thread_id or 0
+                topic_id=update.message.message_thread_id or 0,
+                deadline=deadline_dt,
+                send_dm=False  # Skip DM, we'll send it after message replacement
             )
             
             if task:
@@ -1073,6 +1104,46 @@ async def _handle_duplicate_ticket(context, update, task_service, ticket_gen, ta
                 await update_user_message_with_new_ticket(
                     context, update, original_text, original_ticket, new_ticket
                 )
+                
+                # Now send DM with the UPDATED message_id from database
+                try:
+                    # Get the updated task from database to get the correct message_id
+                    updated_task = await task_service.get_task(new_ticket)
+                    if updated_task:
+                        from src.utils.link_builder import build_message_link
+                        from telegram import Bot
+                        
+                        # Get creator username
+                        creator = await task_service.user_repo.get_user(user_id)
+                        creator_username = creator.username if creator and creator.username else f"User {user_id}"
+                        
+                        # Build link with UPDATED message_id
+                        task_link = build_message_link(context.bot_data.get('config').TELEGRAM_GROUP_ID, updated_task.message_id)
+                        
+                        # Send DM to assignee
+                        bot = Bot(token=context.bot_data.get('config').TELEGRAM_BOT_TOKEN)
+                        
+                        message_text = f"""📋 **New Task Assigned**
+
+**Task:** #{new_ticket}
+**Brand:** {task_data.brand}
+**Assigned by:** @{creator_username}
+
+[📎 View Task]({task_link})
+
+React with 👍 to start working on this task.
+
+_⏱️ This message will auto-delete in 120 seconds_"""
+                        
+                        await bot.send_message(
+                            chat_id=assignee_id,
+                            text=message_text,
+                            parse_mode='Markdown',
+                            disable_web_page_preview=True
+                        )
+                        logger.info(f"✅ Sent task assignment DM to user {assignee_id} for task {new_ticket} with correct message_id")
+                except Exception as dm_error:
+                    logger.warning(f"⚠️ Failed to send task assignment DM: {dm_error}")
                 
                 logger.info(f"✅ Duplicate ticket regeneration successful: {original_ticket} → {new_ticket}")
                 return
@@ -1417,3 +1488,451 @@ def setup_message_handlers(application: Application, config: Config):
         MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message)
     )
     logger.info("Message handlers registered")
+
+
+async def handle_boardroom_meeting(update, text, user_id, username, message_id, meeting_service, config, context):
+    """
+    Handle meeting invitations and notes in Boardroom topic.
+    
+    Supports two formats:
+    1. Meeting Invitation: [MEETING_INVITE] ...
+    2. Meeting Notes: [MEETING] ... [DECISIONS] ... [ACTION_ITEMS] ...
+    """
+    
+    logger.info(f"📝 Processing boardroom message from user {user_id} (@{username}), message {message_id}")
+    
+    # Check if this is a meeting invitation
+    if meeting_parser.is_meeting_invite(text):
+        await _handle_meeting_invitation(update, text, user_id, username, message_id, meeting_service, config, context)
+    
+    # Check if this is meeting notes
+    elif meeting_parser.is_meeting_notes(text):
+        await _handle_meeting_notes(update, text, user_id, username, message_id, meeting_service, config, context)
+    
+    else:
+        # Regular boardroom message (discussion, etc.) - no special handling
+        logger.debug(f"Regular boardroom message (not meeting invite or notes)")
+
+
+async def _is_user_on_leave(user_id: int, attendance_repo) -> bool:
+    """Check if user is currently on leave."""
+    try:
+        from datetime import datetime
+        from src.data.models import LeaveStatus
+        
+        # Get user's leave requests
+        leave_requests = await attendance_repo.get_leave_requests_by_user(user_id)
+        
+        # Check if any approved leave is active today
+        today = datetime.now().date()
+        for leave in leave_requests:
+            if leave.status == LeaveStatus.APPROVED:
+                if leave.start_date <= today <= leave.end_date:
+                    return True
+        
+        return False
+    except Exception as e:
+        logger.warning(f"⚠️ Error checking leave status for user {user_id}: {e}")
+        return False
+
+
+async def _handle_meeting_invitation(update, text, user_id, username, message_id, meeting_service, config, context):
+    """Handle meeting invitation creation."""
+    
+    logger.info(f"📅 Processing meeting invitation from user {user_id}")
+    
+    # Validate format
+    is_valid, error_msg = meeting_parser.validate_meeting_invite_format(text)
+    
+    if not is_valid:
+        logger.warning(f"❌ Meeting invitation format violation: {error_msg}")
+        
+        # Send error DM
+        try:
+            from src.utils.link_builder import build_message_link
+            message_link = build_message_link(config.TELEGRAM_GROUP_ID, message_id)
+            
+            error_text = f"""❌ **Meeting Invitation Format Error**
+
+{error_msg}
+
+[📎 View Your Message]({message_link})
+
+**Correct Format:**
+```
+[MEETING_INVITE] Meeting title
+[DATE] YYYY-MM-DD
+[TIME] HH:MM - HH:MM GMT+6
+[DURATION] X hours / X minutes
+[LOCATION] Zoom link or location
+[ORGANIZER] @username
+[ATTENDEES] @user1, @user2
+[AGENDA]
+• Topic 1
+• Topic 2
+[PRIORITY] LOW / MEDIUM / HIGH / URGENT
+```
+
+_⏱️ This message will auto-delete in 60 seconds_"""
+            
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=error_text,
+                parse_mode='Markdown',
+                disable_web_page_preview=True
+            )
+            logger.info(f"✉️ Sent format error DM to user {user_id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to send format error DM: {e}")
+        
+        return
+    
+    logger.info(f"✅ Meeting invitation format valid")
+    
+    # Parse meeting data
+    meeting_data = meeting_parser.parse_meeting_invite(text)
+    if not meeting_data:
+        logger.error(f"❌ Failed to parse valid meeting invitation")
+        return
+    
+    logger.info(f"✅ Parsed meeting: {meeting_data.title}")
+    
+    # Parse date and time
+    try:
+        # Combine date and time
+        date_str = meeting_data.date  # YYYY-MM-DD
+        time_str = meeting_data.time.split('-')[0].strip()  # Get start time (HH:MM)
+        
+        # Parse datetime
+        meeting_datetime = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+        
+        # Parse duration
+        duration_minutes = meeting_parser.parse_duration_to_minutes(meeting_data.duration)
+        
+        # Parse attendees
+        attendee_usernames = meeting_parser.parse_attendees_list(meeting_data.attendees)
+        
+        # Get attendee user IDs (with special group expansion)
+        user_repo = context.bot_data.get('user_repository')
+        attendance_repo = context.bot_data.get('attendance_repository')
+        attendee_ids = []
+        
+        for attendee_username in attendee_usernames:
+            # Check for special groups
+            username_lower = attendee_username.lower()
+            
+            if username_lower == 'all':
+                # All users in the group (including on leave)
+                all_users = await user_repo.get_all_users()
+                attendee_ids.extend([u.user_id for u in all_users])
+                logger.info(f"✅ Expanded @all to {len(all_users)} users")
+            
+            elif username_lower == 'allactives':
+                # All active users (excluding on leave)
+                all_users = await user_repo.get_all_users()
+                # Filter out users on leave
+                for user in all_users:
+                    is_on_leave = await _is_user_on_leave(user.user_id, attendance_repo)
+                    if not is_on_leave:
+                        attendee_ids.append(user.user_id)
+                logger.info(f"✅ Expanded @allactives to {len([u for u in all_users if u.user_id in attendee_ids])} active users")
+            
+            elif username_lower == 'employees':
+                # All employees (regular users, excluding admins/managers/owners)
+                from src.data.models import UserRole
+                all_users = await user_repo.get_all_users()
+                employees = [u for u in all_users if u.role == UserRole.REGULAR]
+                attendee_ids.extend([u.user_id for u in employees])
+                logger.info(f"✅ Expanded @employees to {len(employees)} employees")
+            
+            elif username_lower == 'activeemployees':
+                # Active employees only (excluding on leave)
+                from src.data.models import UserRole
+                all_users = await user_repo.get_all_users()
+                employees = [u for u in all_users if u.role == UserRole.REGULAR]
+                for emp in employees:
+                    is_on_leave = await _is_user_on_leave(emp.user_id, attendance_repo)
+                    if not is_on_leave:
+                        attendee_ids.append(emp.user_id)
+                logger.info(f"✅ Expanded @activeemployees to {len([e for e in employees if e.user_id in attendee_ids])} active employees")
+            
+            elif username_lower == 'admins':
+                # All admins from config
+                attendee_ids.extend(config.ADMINISTRATORS)
+                logger.info(f"✅ Expanded @admins to {len(config.ADMINISTRATORS)} administrators")
+            
+            elif username_lower == 'managers':
+                # All managers from config
+                attendee_ids.extend(config.MANAGERS)
+                logger.info(f"✅ Expanded @managers to {len(config.MANAGERS)} managers")
+            
+            elif username_lower == 'owners':
+                # All owners from config
+                attendee_ids.extend(config.OWNERS)
+                logger.info(f"✅ Expanded @owners to {len(config.OWNERS)} owners")
+            
+            elif username_lower == 'administrators':
+                # All administrators from config (same as admins)
+                attendee_ids.extend(config.ADMINISTRATORS)
+                logger.info(f"✅ Expanded @administrators to {len(config.ADMINISTRATORS)} administrators")
+            
+            else:
+                # Regular username - try to find user
+                user = await user_repo.get_user_by_username(attendee_username)
+                if user:
+                    attendee_ids.append(user.user_id)
+                else:
+                    logger.warning(f"⚠️ User not found: @{attendee_username}")
+        
+        # Remove duplicates
+        attendee_ids = list(set(attendee_ids))
+        
+        if not attendee_ids:
+            logger.error(f"❌ No valid attendees found")
+            await context.bot.send_message(
+                chat_id=user_id,
+                text="❌ **Error:** No valid attendees found. Make sure usernames are correct.",
+                parse_mode='Markdown'
+            )
+            return
+        
+        logger.info(f"✅ Found {len(attendee_ids)} valid attendees (after expansion and deduplication)")
+        
+        # Parse priority
+        from src.data.models import MeetingPriority
+        priority = MeetingPriority[meeting_data.priority.upper()]
+        
+        # Create meeting (pass user-provided ID if any)
+        meeting = await meeting_service.create_meeting(
+            title=meeting_data.title,
+            date=meeting_datetime,
+            duration_minutes=duration_minutes,
+            location=meeting_data.location,
+            organizer_id=user_id,
+            attendee_ids=attendee_ids,
+            agenda=meeting_data.agenda,
+            priority=priority,
+            message_id=message_id,
+            topic_id=config.TOPIC_BOARDROOM,
+            preparation=meeting_data.preparation,
+            user_provided_id=meeting_data.meeting_id  # Pass user-provided ID (may be None)
+        )
+        
+        if meeting:
+            logger.info(f"✅ Created meeting: {meeting.meeting_id}")
+            
+            # Check if user provided meeting ID
+            user_provided_id = meeting_data.meeting_id
+            id_was_corrected = False
+            
+            if user_provided_id and user_provided_id != meeting.meeting_id:
+                id_was_corrected = True
+                logger.info(f"⚠️ Corrected meeting ID from {user_provided_id} to {meeting.meeting_id}")
+            elif not user_provided_id:
+                logger.info(f"✅ Auto-generated meeting ID: {meeting.meeting_id}")
+            
+            # Edit the original message to add/update [MEETING_ID] at the top
+            try:
+                # Build updated message with [MEETING_ID] at the top
+                updated_text = f"[MEETING_ID] {meeting.meeting_id}\n{text}"
+                
+                # If message already had [MEETING_ID], replace it
+                if '[MEETING_ID]' in text:
+                    # Remove old [MEETING_ID] line
+                    lines = text.split('\n')
+                    updated_lines = [line for line in lines if not line.strip().startswith('[MEETING_ID]')]
+                    updated_text = f"[MEETING_ID] {meeting.meeting_id}\n" + '\n'.join(updated_lines)
+                
+                await context.bot.edit_message_text(
+                    chat_id=update.message.chat_id,
+                    message_id=message_id,
+                    text=updated_text
+                )
+                logger.info(f"✅ Updated message with meeting ID: {meeting.meeting_id}")
+                
+            except Exception as e:
+                logger.warning(f"⚠️ Could not update message with meeting ID: {e}")
+            
+            # Send confirmation DM to organizer
+            try:
+                from src.utils.link_builder import build_message_link
+                meeting_link = build_message_link(config.TELEGRAM_GROUP_ID, message_id)
+                
+                if id_was_corrected:
+                    correction_note = f"\n\n⚠️ **Note:** Meeting ID was auto-corrected from `{user_provided_id}` to `{meeting.meeting_id}` (duplicate/invalid ID)"
+                elif not user_provided_id:
+                    correction_note = f"\n\n✅ **Note:** Meeting ID was auto-generated"
+                else:
+                    correction_note = ""
+                
+                confirmation_text = f"""✅ **Meeting Created**
+
+**Meeting ID:** {meeting.meeting_id}
+**Title:** {meeting.title}
+**Date:** {meeting.date.strftime("%Y-%m-%d %H:%M")}
+**Attendees:** {len(attendee_ids)} invited
+
+[📎 View Meeting]({meeting_link})
+
+Invitations will be sent to all attendees.{correction_note}
+
+_⏱️ This message will auto-delete in 60 seconds_"""
+                
+                await context.bot.send_message(
+                    chat_id=user_id,
+                    text=confirmation_text,
+                    parse_mode='Markdown',
+                    disable_web_page_preview=True
+                )
+                logger.info(f"✅ Sent confirmation DM to organizer")
+                
+            except Exception as e:
+                logger.error(f"Failed to send confirmation DM: {e}")
+        
+        else:
+            logger.error(f"❌ Failed to create meeting")
+            await context.bot.send_message(
+                chat_id=user_id,
+                text="❌ **Error:** Failed to create meeting. Please try again.",
+                parse_mode='Markdown'
+            )
+    
+    except Exception as e:
+        logger.error(f"❌ Error creating meeting: {e}", exc_info=True)
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=f"❌ **Error:** {str(e)}",
+            parse_mode='Markdown'
+        )
+
+
+async def _handle_meeting_notes(update, text, user_id, username, message_id, meeting_service, config, context):
+    """Handle meeting notes posting."""
+    
+    logger.info(f"📝 Processing meeting notes from user {user_id}")
+    
+    # Validate format
+    is_valid, error_msg = meeting_parser.validate_meeting_notes_format(text)
+    
+    if not is_valid:
+        logger.warning(f"❌ Meeting notes format violation: {error_msg}")
+        
+        # Send error DM
+        try:
+            error_text = f"""❌ **Meeting Notes Format Error**
+
+{error_msg}
+
+**Correct Format:**
+```
+[MEETING] Meeting title [MTG-YYMM-XX]
+[DATE] YYYY-MM-DD
+[TIME] HH:MM - HH:MM
+[ATTENDEES] @user1, @user2
+[AGENDA] What was discussed
+[DECISIONS] What was decided
+[ACTION_ITEMS] Who does what
+[NEXT_MEETING] YYYY-MM-DD (optional)
+```
+
+_⏱️ This message will auto-delete in 60 seconds_"""
+            
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=error_text,
+                parse_mode='Markdown'
+            )
+            logger.info(f"✉️ Sent format error DM to user {user_id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to send format error DM: {e}")
+        
+        return
+    
+    logger.info(f"✅ Meeting notes format valid")
+    
+    # Parse notes data
+    notes_data = meeting_parser.parse_meeting_notes(text)
+    if not notes_data:
+        logger.error(f"❌ Failed to parse valid meeting notes")
+        return
+    
+    # Extract meeting ID
+    meeting_id = meeting_parser.extract_meeting_id(text)
+    if not meeting_id:
+        logger.warning(f"⚠️ No meeting ID found in notes")
+        await context.bot.send_message(
+            chat_id=user_id,
+            text="⚠️ **Warning:** No meeting ID found. Include [MTG-YYMM-XX] in the title.",
+            parse_mode='Markdown'
+        )
+        return
+    
+    logger.info(f"✅ Parsed notes for meeting: {meeting_id}")
+    
+    # Parse next meeting date if provided
+    next_meeting_date = None
+    if notes_data.next_meeting:
+        try:
+            next_meeting_date = datetime.strptime(notes_data.next_meeting, "%Y-%m-%d")
+        except:
+            logger.warning(f"⚠️ Invalid next meeting date: {notes_data.next_meeting}")
+    
+    # Post meeting notes
+    try:
+        notes = await meeting_service.post_meeting_notes(
+            meeting_id=meeting_id,
+            posted_by=user_id,
+            message_id=message_id,
+            attendees_present=notes_data.attendees_present,
+            decisions=notes_data.decisions,
+            action_items=notes_data.action_items,
+            next_meeting_date=next_meeting_date
+        )
+        
+        if notes:
+            logger.info(f"✅ Posted meeting notes for {meeting_id}")
+            
+            # Send confirmation DM
+            try:
+                from src.utils.link_builder import build_message_link
+                notes_link = build_message_link(config.TELEGRAM_GROUP_ID, message_id)
+                
+                confirmation_text = f"""✅ **Meeting Notes Posted**
+
+**Meeting ID:** #{meeting_id}
+**Posted by:** @{username}
+
+[📎 View Notes]({notes_link})
+
+All attendees have been notified.
+
+_⏱️ This message will auto-delete in 60 seconds_"""
+                
+                await context.bot.send_message(
+                    chat_id=user_id,
+                    text=confirmation_text,
+                    parse_mode='Markdown',
+                    disable_web_page_preview=True
+                )
+                logger.info(f"✅ Sent confirmation DM")
+                
+            except Exception as e:
+                logger.error(f"Failed to send confirmation DM: {e}")
+        
+        else:
+            logger.error(f"❌ Failed to post meeting notes")
+            await context.bot.send_message(
+                chat_id=user_id,
+                text="❌ **Error:** Failed to post meeting notes. Please try again.",
+                parse_mode='Markdown'
+            )
+    
+    except Exception as e:
+        logger.error(f"❌ Error posting meeting notes: {e}", exc_info=True)
+        await context.bot.send_message(
+            chat_id=user_id,
+            text=f"❌ **Error:** {str(e)}",
+            parse_mode='Markdown'
+        )

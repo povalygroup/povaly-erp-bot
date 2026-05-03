@@ -1,1 +1,0 @@
-"""Bot application layer."""

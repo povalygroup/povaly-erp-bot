@@ -39,11 +39,7 @@ Reactions:
 
 ⚡ COMMANDS
 
-/strategy - View all initiatives
-/strategy TOPIC - View specific strategy
-/mystrategy - View your strategies
-/strategydiscussion - Start new discussion
-/strategystatus - View status of all initiatives
+Note: Strategic Lounge is currently discussion-based. Post strategies using the format above.
 
 👑 FOR LEADERSHIP/MANAGERS
 
@@ -98,5 +94,5 @@ WORKFLOW:
 ❓ NEED HELP?
 
 Unclear about strategy? → Ask in Core Operations
-Want to propose idea? → Use /strategydiscussion command
-Check progress? → Use /strategystatus command
+Want to propose idea? → Post using the format above
+Check progress? → Review discussion threads

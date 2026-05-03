@@ -12,8 +12,8 @@ System tracks: check-in, check-out, breaks, work hours, status
 /mybreaks - View today's breaks
 
 ☕ BREAK TRACKING
-/breakstart → Stops work hour counting
-/breakend → Resumes work hour counting
+/break → Stops work hour counting
+/recheckin → Resumes work hour counting
 
 🏖️ LEAVE REQUESTS
 
@@ -44,9 +44,9 @@ On approval:
 → Original assignee gets approval DM
 
 ⚡ COMMANDS
-/attendance, /myattendance, /breakstart, /breakend, /mybreaks
+/checkin, /checkout, /break, /recheckin
+/myattendance, /attendance, /attendancedetails
 /requestleave, /myleave, /pendingleave
-/workload, /teamattendance
 
 👷 FOR EMPLOYEES
 1. Work normally (auto-tracked)

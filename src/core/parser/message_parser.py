@@ -6,6 +6,40 @@ from dataclasses import dataclass
 from datetime import datetime
 
 
+def parse_deadline_string(deadline_str: str) -> Optional[datetime]:
+    """
+    Parse deadline string to datetime object.
+    Format: DD MMM YYYY | HH:MM AM/PM GMT+6
+    Examples:
+        - "28 Apr 2026 | 6:00 PM GMT+6"
+        - "05 May 2026 | 11:30 AM GMT+6"
+        - "15 Dec 2025 | 2:45 PM GMT+6"
+    
+    Returns:
+        datetime object or None if parsing fails
+    """
+    if not deadline_str:
+        return None
+    
+    try:
+        # Remove GMT+6 suffix and extra spaces
+        deadline_str = deadline_str.replace('GMT+6', '').strip()
+        
+        # Parse the datetime
+        # Format: "28 Apr 2026 | 6:00 PM" or "28 Apr 2026 | 06:00 PM"
+        dt = datetime.strptime(deadline_str, "%d %b %Y | %I:%M %p")
+        
+        return dt
+    except ValueError:
+        try:
+            # Try alternative format without pipe
+            deadline_str = deadline_str.replace('|', '').strip()
+            dt = datetime.strptime(deadline_str, "%d %b %Y %I:%M %p")
+            return dt
+        except ValueError:
+            return None
+
+
 @dataclass
 class TaskMessage:
     """Parsed task allocation message."""

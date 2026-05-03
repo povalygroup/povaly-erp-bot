@@ -92,6 +92,7 @@ class DeadlineReminderService:
             now = datetime.now()
             
             for task in all_tasks:
+                # Skip tasks without deadline
                 if not task.deadline:
                     continue
                 

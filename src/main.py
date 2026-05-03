@@ -119,12 +119,20 @@ async def main() -> None:
             await deadline_reminder_service.start()
             logger.info("Deadline reminder service started")
         
+        # Start meeting reminder service
+        meeting_reminder_service = application.bot_data.get("meeting_reminder_service")
+        if meeting_reminder_service:
+            await meeting_reminder_service.start()
+            logger.info("Meeting reminder service started")
+        
         print("✅ All services started", flush=True)
         print("🤖 Bot is now polling for messages...", flush=True)
         
+        logger.info("🚀 Starting polling with drop_pending_updates=True...")
+        logger.info("📋 This will discard any updates that occurred while bot was offline")
         await application.updater.start_polling(
             allowed_updates=["message", "message_reaction", "callback_query"],
-            drop_pending_updates=True
+            drop_pending_updates=True  # Drop pending updates to prevent phantom notifications
         )
         
         print("=" * 60, flush=True)
@@ -202,6 +210,12 @@ async def main() -> None:
         if deadline_reminder_service:
             await deadline_reminder_service.stop()
             logger.info("Deadline reminder service stopped")
+        
+        # Stop meeting reminder service
+        meeting_reminder_service = application.bot_data.get("meeting_reminder_service")
+        if meeting_reminder_service:
+            await meeting_reminder_service.stop()
+            logger.info("Meeting reminder service stopped")
         
         await application.updater.stop()
         await application.stop()

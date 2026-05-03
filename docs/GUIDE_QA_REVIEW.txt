@@ -1,46 +1,86 @@
 📋 QA REVIEW GUIDE — QUALITY ASSURANCE WORKFLOW
 
-🎯 PURPOSE: Submit completed work for QA approval before marking as complete.
+═══════════════════════════════════════════════════════════════════
+
+🎯 PURPOSE
+Submit completed work for QA approval before marking as complete.
+
+═══════════════════════════════════════════════════════════════════
 
 📝 SUBMISSION FORMAT
 
 [TICKET] POV260501
-[TASK] Task title
-[ASSIGNEE] @username
-[SUBMISSION_LINK] Google Drive / GitHub / URL
-[NOTES] Additional notes (optional)
+[BRAND] #GSMAura
+[ASSET] Doc link/any text/any document
 
-Required: [TICKET], [SUBMISSION_LINK]
+Required Fields: [TICKET], [BRAND], [ASSET]
+
+═══════════════════════════════════════════════════════════════════
 
 🔄 REACTION-BASED QA SYSTEM
 
+👍 = REVIEW STARTED (QA reviewer begins review)
 ❤️ = APPROVED (QA reviewer approves)
 👎 = REJECTED (QA reviewer rejects)
-👍 = REVIEW STARTED (QA reviewer begins review)
+
+═══════════════════════════════════════════════════════════════════
 
 🤖 AUTOMATION LOGIC
 
 On 👍 (Review Started):
-→ Mark as UNDER_REVIEW
-→ Send DM to submitter
+→ Mark as IN_REVIEW
+→ Send DM to submitter (auto-delete 60s)
+→ Reviewer claims the QA submission
 
 On ❤️ (Approved):
-→ Mark as APPROVED
-→ Mark task as COMPLETED
-→ Archive to Central Archive
-→ Send approval DM
+→ Mark QA as APPROVED
+→ Mark task as APPROVED (NOT COMPLETED)
+→ Send approval DM (auto-delete 90s)
+→ Assignee must react ❤️ on Task Allocation to mark COMPLETED
 
 On 👎 (Rejected):
-→ Mark as REJECTED
-→ Send rejection DM with reason
-→ Task returns to ASSIGNED state
+→ Mark QA as REJECTED
+→ Mark task as REJECTED
+→ Send rejection DM (auto-delete 90s)
+→ Task returns to REJECTED state for fixes
+
+═══════════════════════════════════════════════════════════════════
+
+↩️ REACTION REVERSAL SYSTEM
+
+Remove 👍 (Unclaim Review):
+→ If PENDING/IN_REVIEW: Reverts to PENDING
+→ Sends unclaim DM to submitter (auto-delete 60s)
+→ Another reviewer can claim it
+
+Remove ❤️ (Revert Approval):
+→ Reverts QA from APPROVED to IN_REVIEW
+→ Reverts task from APPROVED to QA_SUBMITTED
+→ Sends revert DM to submitter (auto-delete 90s)
+→ Reviewer can re-evaluate submission
+
+Remove 👎 (Revert Rejection):
+→ Reverts QA from REJECTED to IN_REVIEW
+→ Reverts task from REJECTED to QA_SUBMITTED
+→ Sends revert DM to submitter (auto-delete 90s)
+→ Reviewer can re-evaluate submission
+
+⚠️ Smart Detection:
+• If 👍 removed but ❤️/👎 added: No unclaim notification (it's approval/rejection)
+• All reversal DMs use plain text to avoid Markdown errors
+• Reversals preserve original reviewer info for tracking
+
+═══════════════════════════════════════════════════════════════════
 
 ⏱️ QA ESCALATION (AUTOMATIC)
 
 If submission not reviewed within 4 hours:
 → Alert sent to Admin Control Panel
 → Shows submitter and link
-→ Escalates to admin
+→ Escalates to admins/managers
+→ Escalation DM (auto-delete 120s)
+
+═══════════════════════════════════════════════════════════════════
 
 ⏰ AUTO REMINDER
 
@@ -48,25 +88,33 @@ If under review but not approved within 2 hours:
 → Reminder DM to QA reviewer
 → Repeats every 1 hour
 
+═══════════════════════════════════════════════════════════════════
+
 ⚡ COMMANDS
 
-/submitqa TICKET LINK - Quick submit
-/mysubmissions - View your submissions
+/newqa - Submit work for QA
+/submitqa - Submit work for QA (alias)
+/myqa - View your submissions
 /pendingqa - View pending (QA only)
+/reviewingqa - View QAs you're reviewing (QA only)
+/unreviewedqa - View unreviewed QAs (QA only)
 /qa #TICKET - View full details
-/approveqa #TICKET - Approve submission
-/rejectqa #TICKET REASON - Reject submission
-/qahelp - Quick reference
+/approve #TICKET - Approve submission
+/reject #TICKET REASON - Reject submission
+/reopenqa #TICKET - Resubmit after rejection
+/qahelp - QA quick reference guide
+
+═══════════════════════════════════════════════════════════════════
 
 👷 FOR EMPLOYEES
 
 WORKFLOW:
 1. Complete task in Task Allocation
-2. React 👍 to mark started
-3. Prepare deliverables
-4. Post submission in QA Review
-5. Wait for review (get DM when started)
-6. If ❤️: Task complete! ✅
+2. React 👍 to mark STARTED
+3. Complete your work
+4. Post submission in QA & Review topic
+5. Wait for review (get DM when reviewer claims it)
+6. If ❤️: Task APPROVED! React ❤️ on Task Allocation to mark COMPLETED
 7. If 👎: Fix issues, resubmit
 
 ⚠️ Important:
@@ -74,38 +122,81 @@ WORKFLOW:
 • Include all deliverables
 • Provide clear submission link
 • Add helpful notes
-• Check DMs for status
+• Check DMs for status updates
+• After QA approval, confirm completion on Task Allocation
+
+🔔 DM Notifications (All Auto-Delete):
+• Review started: 60 seconds
+• QA approved: 90 seconds
+• QA rejected: 90 seconds
+• Review unclaimed: 60 seconds
+• Approval/rejection reverted: 90 seconds
+
+═══════════════════════════════════════════════════════════════════
 
 👑 FOR QA REVIEWERS
 
 WORKFLOW:
-1. Check /pendingqa for submissions
+1. Check /pendingqa or /unreviewedqa for submissions
 2. Review oldest first
-3. React 👍 to mark review started
+3. React 👍 to claim and mark review started
 4. Check deliverables vs requirements
 5. React ❤️ to approve OR 👎 to reject
-6. If rejecting, reply with reason
+6. If rejecting, use /reject command with specific reason
 
 ⚠️ Important:
 • Review within 2 hours
-• Provide rejection reason
-• Be clear about requirements
+• Provide clear rejection reasons
+• Be specific about requirements
 • Approve only if 100% meets specs
+• Can revert decisions by removing reactions
+
+🔄 Reversal Options:
+• Remove ❤️: Revert approval, re-evaluate
+• Remove 👎: Revert rejection, re-evaluate
+• Remove 👍: Unclaim review, let others review
+
+═══════════════════════════════════════════════════════════════════
+
+📊 QA STATES EXPLAINED
+
+🟡 PENDING - Waiting for reviewer to claim
+🔵 IN_REVIEW - Reviewer is evaluating submission
+✅ APPROVED - QA passed, task ready for completion confirmation
+❌ REJECTED - QA failed, needs fixes and resubmission
+
+═══════════════════════════════════════════════════════════════════
 
 ⚠️ TOPIC RULES
 
-✓ DO: Post QA submissions, use format, include link
-✗ DON'T: Post non-submissions, skip fields, post incomplete work
+✓ DO:
+• Post QA submissions with proper format
+• Include all required fields
+• Provide clear asset links
+• Reply in thread for discussions
+
+✗ DON'T:
+• Post non-submissions
+• Skip required fields
+• Post incomplete work
+• React to your own QA submissions
+
+═══════════════════════════════════════════════════════════════════
 
 🚫 WHAT DOESN'T BELONG HERE
 
 ❌ Task assignment → Task Allocation
 ❌ Issue reporting → Core Operations
 ❌ Completed work → Central Archive
-❌ Casual chat → Team Lounge
+❌ Casual chat → Strategic Lounge
+
+═══════════════════════════════════════════════════════════════════
 
 ❓ NEED HELP?
 
-Rejected? → Check DM for reason, fix, resubmit
-Unsure format? → Use /submitqa command
+Rejected? → Check DM for reason, fix issues, resubmit
+Unsure format? → Use /submitqa command for template
 QA questions? → Ask in Core Operations
+Approval reverted? → Check DM, reviewer will re-evaluate
+
+═══════════════════════════════════════════════════════════════════

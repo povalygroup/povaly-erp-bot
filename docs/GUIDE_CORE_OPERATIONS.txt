@@ -1,11 +1,19 @@
 📌 CORE OPERATIONS — ISSUE RESOLUTION HUB
 
-🎯 PURPOSE: Structured issue-resolution hub for execution problems, technical debugging, and operational blockers.
+═══════════════════════════════════════════════════════════════════
+
+🎯 PURPOSE
+Structured issue-resolution hub for execution problems, technical debugging, and operational blockers.
+
+═══════════════════════════════════════════════════════════════════
 
 🔐 ACCESS CONTROL
+
 👑 Authorized: Chairman, CEO, Managers, Assigned Team
 👤 All Members: Can use
 🚫 No casual chat allowed
+
+═══════════════════════════════════════════════════════════════════
 
 📝 ISSUE ENTRY FORMAT (MANDATORY)
 
@@ -30,6 +38,8 @@ Example 2 (without ISSUETICKET - will be auto-generated):
 [DETAILS] API taking more than 5 seconds to respond
 [PRIORITY] MEDIUM
 
+═══════════════════════════════════════════════════════════════════
+
 🔄 REACTION-BASED SYSTEM
 
 👍 = CLAIM (user is handling issue)
@@ -40,29 +50,63 @@ Rules:
 • First 👍 = primary handler
 • Multiple 👍 allowed (collaboration)
 • ❤️ marks final resolution
+• 👎 marks as invalid/wrong issue
 • Only reactions control status
+
+═══════════════════════════════════════════════════════════════════
 
 🤖 AUTOMATION LOGIC
 
 On 👍 (Claim):
 → Store user as handler
 → Mark as IN_PROGRESS
-→ Send DM to handler
+→ Send DM to issue creator (auto-delete 60s)
+→ Send DM to task assignee if different (auto-delete 60s)
 
 On ❤️ (Resolved):
 → Mark as RESOLVED
 → Lock issue state
-→ Send DM to creator
+→ Send DM to creator (auto-delete 60s)
 
 On 👎 (Invalid):
 → Mark as INVALID
-→ Send DM to creator
+→ Send DM to creator (auto-delete 60s)
+
+═══════════════════════════════════════════════════════════════════
+
+↩️ REACTION REVERSAL SYSTEM
+
+Remove 👍 (Unclaim Issue):
+→ Reverts issue to OPEN status
+→ Sends unclaim DM to creator (auto-delete 60s)
+→ Another user can claim it
+→ Smart detection: No unclaim if ❤️/👎 added (state handled by new reaction)
+
+Remove ❤️ (Unresolve Issue):
+→ Reverts issue from RESOLVED to IN_PROGRESS
+→ Sends unresolve DM to creator (auto-delete 60s)
+→ Issue can be re-evaluated
+
+Remove 👎 (Unreject Issue):
+→ Reverts issue from INVALID to IN_PROGRESS
+→ Sends unreject DM to creator (auto-delete 60s)
+→ Issue can be re-evaluated
+
+⚠️ Smart Detection:
+• If 👍 removed but ❤️/👎 added: No unclaim notification (it's resolution/rejection)
+• All reversal DMs use plain text to avoid Markdown errors
+• Reversals allow flexible issue management
+
+═══════════════════════════════════════════════════════════════════
 
 ⏱️ ESCALATION (AUTOMATIC)
 
 If not resolved within 2 hours:
 → Alert sent to Admin Control Panel
 → Shows ticket, status, assignee, time elapsed
+→ Escalation DM to admins (auto-delete 120s)
+
+═══════════════════════════════════════════════════════════════════
 
 ⏰ AUTO REMINDER
 
@@ -70,37 +114,85 @@ If claimed but not resolved within 2 hours:
 → Reminder DM to handler
 → Repeats every 1 hour
 
+═══════════════════════════════════════════════════════════════════
+
 ⚡ COMMANDS
 
-/myissues - View your claimed issues
+/newissue - Create new issue with template
+/myissues - View issues you created
+/myclaimedissues - View issues you're handling
 /openissues - View all unresolved issues
 /issue #TICKET - View full details
 /close #TICKET - Mark resolved
 /unresolved - View claimed but unresolved
 /inactive - View unclaimed issues
 
+═══════════════════════════════════════════════════════════════════
+
 💬 DISCUSSION SYSTEM
 
 • All replies under original message
 • No new messages for same issue
 • Thread = single source of truth
+• Keep discussions focused and technical
+
+═══════════════════════════════════════════════════════════════════
+
+📊 ISSUE STATES EXPLAINED
+
+🔴 OPEN - New issue, not claimed yet
+🟡 IN_PROGRESS - Claimed and being worked on
+✅ RESOLVED - Issue fixed and confirmed
+❌ INVALID - Not a real issue or wrong report
+🚨 ESCALATED - Overdue, escalated to admins
+
+═══════════════════════════════════════════════════════════════════
 
 ⚠️ TOPIC RULES
 
-✓ DO: Post issues, use format, include details, reply in thread
-✗ DON'T: Post non-issues, skip fields, create duplicates
+✓ DO:
+• Post issues with proper format
+• Include all required fields
+• Provide clear details
+• Reply in thread for discussions
+• Use reactions to manage status
+
+✗ DON'T:
+• Post non-issues
+• Skip required fields
+• Create duplicates
+• Have casual conversations
+
+═══════════════════════════════════════════════════════════════════
 
 🚫 WHAT DOESN'T BELONG HERE
 
 ❌ Task assignment → Task Allocation
-❌ QA submissions → QA Review
+❌ QA submissions → QA & Review
 ❌ Asset storage → Brand Repository
 ❌ Official decisions → Official Directives
-❌ Casual chat → Team Lounge
+❌ Casual chat → Strategic Lounge
+
+═══════════════════════════════════════════════════════════════════
+
+🔔 DM NOTIFICATIONS (ALL AUTO-DELETE)
+
+• Issue claimed: 60 seconds
+• Issue resolved: 60 seconds
+• Issue rejected: 60 seconds
+• Issue unclaimed: 60 seconds
+• Resolution/rejection reverted: 60 seconds
+• Escalation to admins: 120 seconds
+
+═══════════════════════════════════════════════════════════════════
 
 ❓ NEED HELP?
 
-View your issues? → Use /myissues command
-Check all issues? → Use /openissues command
-View details? → Use /issue #TICKET command
-Mark resolved? → Use /close #TICKET command
+View your created issues? → Use /myissues command
+View your claimed issues? → Use /myclaimedissues command
+Check all open issues? → Use /openissues command
+View issue details? → Use /issue #TICKET command
+Mark resolved? → React ❤️ or use /close #TICKET command
+Reverted by mistake? → Remove reaction to revert state
+
+═══════════════════════════════════════════════════════════════════

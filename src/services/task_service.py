@@ -36,7 +36,9 @@ class TaskService:
         assignee_id: int,
         creator_id: int,
         message_id: int,
-        topic_id: int
+        topic_id: int,
+        deadline: Optional[datetime] = None,
+        send_dm: bool = True
     ) -> Optional[Task]:
         """
         Create a new task.
@@ -48,6 +50,8 @@ class TaskService:
             creator_id: User ID of creator
             message_id: Telegram message ID
             topic_id: Telegram topic ID
+            deadline: Optional deadline datetime
+            send_dm: Whether to send DM notification (default True)
         
         Returns:
             Created task or None if creation failed
@@ -98,7 +102,8 @@ class TaskService:
             state=TaskState.ASSIGNED,
             created_at=datetime.now(),
             message_id=message_id,
-            topic_id=topic_id
+            topic_id=topic_id,
+            deadline=deadline
         )
         
         logger.info(f"📝 Task object created: {task.ticket}, state={task.state.value}")
@@ -129,22 +134,23 @@ class TaskService:
             logger.warning(f"⚠️ Failed to ensure users exist for task {ticket}: {e}")
         
         # Send DM notification to assignee about new task assignment
-        try:
-            from src.utils.link_builder import build_message_link
-            
-            # Get creator username
-            creator = await self.user_repo.get_user(creator_id)
-            creator_username = creator.username if creator and creator.username else f"User {creator_id}"
-            
-            # Build link to task message
-            task_link = build_message_link(self.config.TELEGRAM_GROUP_ID, message_id)
-            
-            # Send DM to assignee
-            from telegram import Bot
-            bot = Bot(token=self.config.TELEGRAM_BOT_TOKEN)
-            
-            # Create message with auto-delete warning
-            message_text = f"""📋 **New Task Assigned**
+        if send_dm:
+            try:
+                from src.utils.link_builder import build_message_link
+                
+                # Get creator username
+                creator = await self.user_repo.get_user(creator_id)
+                creator_username = creator.username if creator and creator.username else f"User {creator_id}"
+                
+                # Build link to task message
+                task_link = build_message_link(self.config.TELEGRAM_GROUP_ID, message_id)
+                
+                # Send DM to assignee
+                from telegram import Bot
+                bot = Bot(token=self.config.TELEGRAM_BOT_TOKEN)
+                
+                # Create message with auto-delete warning
+                message_text = f"""📋 **New Task Assigned**
 
 **Task:** #{ticket}
 **Brand:** {brand_code}
@@ -155,30 +161,30 @@ class TaskService:
 React with 👍 to start working on this task.
 
 _⏱️ This message will auto-delete in 120 seconds_"""
-            
-            await bot.send_message(
-                chat_id=assignee_id,
-                text=message_text,
-                parse_mode='Markdown',
-                disable_web_page_preview=True
-            )
-            logger.info(f"✅ Sent task assignment DM to user {assignee_id} for task {ticket}")
-            
-            # Schedule auto-delete
-            import asyncio
-            async def delete_after_delay():
-                await asyncio.sleep(120)
-                try:
-                    # Note: We can't delete the message here because we don't have the message_id
-                    # The bot instance is temporary. This is a limitation.
-                    pass
-                except Exception as e:
-                    logger.warning(f"Failed to auto-delete task assignment DM: {e}")
-            
-            asyncio.create_task(delete_after_delay())
-            
-        except Exception as e:
-            logger.warning(f"⚠️ Failed to send task assignment DM to user {assignee_id}: {e}")
+                
+                await bot.send_message(
+                    chat_id=assignee_id,
+                    text=message_text,
+                    parse_mode='Markdown',
+                    disable_web_page_preview=True
+                )
+                logger.info(f"✅ Sent task assignment DM to user {assignee_id} for task {ticket}")
+                
+                # Schedule auto-delete
+                import asyncio
+                async def delete_after_delay():
+                    await asyncio.sleep(120)
+                    try:
+                        # Note: We can't delete the message here because we don't have the message_id
+                        # The bot instance is temporary. This is a limitation.
+                        pass
+                    except Exception as e:
+                        logger.warning(f"Failed to auto-delete task assignment DM: {e}")
+                
+                asyncio.create_task(delete_after_delay())
+                
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to send task assignment DM to user {assignee_id}: {e}")
         
         return task
     

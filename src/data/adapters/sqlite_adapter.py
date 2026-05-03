@@ -519,7 +519,7 @@ class SQLiteAdapter:
         """Insert a new task."""
         try:
             await self.conn.execute("""
-                INSERT INTO tasks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO tasks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 task.ticket, task.brand, task.assignee_id, task.creator_id,
                 task.state.value, task.created_at.isoformat(),
@@ -529,7 +529,8 @@ class SQLiteAdapter:
                 task.message_id, task.topic_id,
                 1 if task.has_fire_exemption else 0,
                 task.fire_exemption_by,
-                task.fire_exemption_at.isoformat() if task.fire_exemption_at else None
+                task.fire_exemption_at.isoformat() if task.fire_exemption_at else None,
+                task.deadline.isoformat() if task.deadline else None
             ))
             await self.conn.commit()
             logger.info(f"✅ Task inserted successfully: {task.ticket}")
@@ -580,7 +581,7 @@ class SQLiteAdapter:
                 "UPDATE tasks SET state = ?, qa_submitted_at = ? WHERE ticket = ?",
                 (state.value, timestamp.isoformat(), ticket)
             )
-        elif state in (TaskState.APPROVED, TaskState.ARCHIVED):
+        elif state in (TaskState.APPROVED, TaskState.COMPLETED, TaskState.ARCHIVED):
             await self.conn.execute(
                 "UPDATE tasks SET state = ?, completed_at = ? WHERE ticket = ?",
                 (state.value, timestamp.isoformat(), ticket)
@@ -1246,3 +1247,625 @@ class SQLiteAdapter:
                 rows = await cursor.fetchall()
                 return [dict(row) for row in rows]
 
+
+    # ============================================================================
+    # MEETING OPERATIONS
+    # ============================================================================
+    
+    async def insert_meeting(self, meeting):
+        """Insert a new meeting."""
+        try:
+            await self.conn.execute("""
+                INSERT INTO meetings (
+                    meeting_id, title, date, duration_minutes, location, organizer_id,
+                    agenda, priority, status, created_at, message_id, topic_id,
+                    preparation, notes_message_id, cancelled_reason, rescheduled_to,
+                    reminded_24h_at, reminded_1h_at, reminded_15m_at, completed_at, cancelled_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                meeting.meeting_id,
+                meeting.title,
+                meeting.date.isoformat(),
+                meeting.duration_minutes,
+                meeting.location,
+                meeting.organizer_id,
+                meeting.agenda,
+                meeting.priority.value,
+                meeting.status.value,
+                meeting.created_at.isoformat(),
+                meeting.message_id,
+                meeting.topic_id,
+                meeting.preparation,
+                meeting.notes_message_id,
+                meeting.cancelled_reason,
+                meeting.rescheduled_to,
+                meeting.reminded_24h_at.isoformat() if meeting.reminded_24h_at else None,
+                meeting.reminded_1h_at.isoformat() if meeting.reminded_1h_at else None,
+                meeting.reminded_15m_at.isoformat() if meeting.reminded_15m_at else None,
+                meeting.completed_at.isoformat() if meeting.completed_at else None,
+                meeting.cancelled_at.isoformat() if meeting.cancelled_at else None,
+            ))
+            await self.conn.commit()
+            logger.info(f"✅ Inserted meeting: {meeting.meeting_id}")
+        except Exception as e:
+            logger.error(f"❌ Error inserting meeting: {e}")
+            raise
+    
+    async def get_meeting_by_id(self, meeting_id: str):
+        """Get meeting by meeting ID."""
+        await self.conn.commit()  # Ensure we see latest data
+        async with self.conn.execute(
+            "SELECT * FROM meetings WHERE meeting_id = ?", (meeting_id,)
+        ) as cursor:
+            row = await cursor.fetchone()
+            if row:
+                from src.data.models import Meeting, MeetingStatus, MeetingPriority
+                return Meeting(
+                    meeting_id=row['meeting_id'],
+                    title=row['title'],
+                    date=datetime.fromisoformat(row['date']),
+                    duration_minutes=row['duration_minutes'],
+                    location=row['location'],
+                    organizer_id=row['organizer_id'],
+                    agenda=row['agenda'],
+                    priority=MeetingPriority(row['priority']),
+                    status=MeetingStatus(row['status']),
+                    created_at=datetime.fromisoformat(row['created_at']),
+                    message_id=row['message_id'],
+                    topic_id=row['topic_id'],
+                    preparation=row['preparation'],
+                    notes_message_id=row['notes_message_id'],
+                    cancelled_reason=row['cancelled_reason'],
+                    rescheduled_to=row['rescheduled_to'],
+                    reminded_24h_at=datetime.fromisoformat(row['reminded_24h_at']) if row['reminded_24h_at'] else None,
+                    reminded_1h_at=datetime.fromisoformat(row['reminded_1h_at']) if row['reminded_1h_at'] else None,
+                    reminded_15m_at=datetime.fromisoformat(row['reminded_15m_at']) if row['reminded_15m_at'] else None,
+                    completed_at=datetime.fromisoformat(row['completed_at']) if row['completed_at'] else None,
+                    cancelled_at=datetime.fromisoformat(row['cancelled_at']) if row['cancelled_at'] else None,
+                )
+            return None
+    
+    async def get_meeting_by_message_id(self, message_id: int):
+        """Get meeting by message ID."""
+        await self.conn.commit()
+        async with self.conn.execute(
+            "SELECT * FROM meetings WHERE message_id = ?", (message_id,)
+        ) as cursor:
+            row = await cursor.fetchone()
+            if row:
+                from src.data.models import Meeting, MeetingStatus, MeetingPriority
+                return Meeting(
+                    meeting_id=row['meeting_id'],
+                    title=row['title'],
+                    date=datetime.fromisoformat(row['date']),
+                    duration_minutes=row['duration_minutes'],
+                    location=row['location'],
+                    organizer_id=row['organizer_id'],
+                    agenda=row['agenda'],
+                    priority=MeetingPriority(row['priority']),
+                    status=MeetingStatus(row['status']),
+                    created_at=datetime.fromisoformat(row['created_at']),
+                    message_id=row['message_id'],
+                    topic_id=row['topic_id'],
+                    preparation=row['preparation'],
+                    notes_message_id=row['notes_message_id'],
+                    cancelled_reason=row['cancelled_reason'],
+                    rescheduled_to=row['rescheduled_to'],
+                    reminded_24h_at=datetime.fromisoformat(row['reminded_24h_at']) if row['reminded_24h_at'] else None,
+                    reminded_1h_at=datetime.fromisoformat(row['reminded_1h_at']) if row['reminded_1h_at'] else None,
+                    reminded_15m_at=datetime.fromisoformat(row['reminded_15m_at']) if row['reminded_15m_at'] else None,
+                    completed_at=datetime.fromisoformat(row['completed_at']) if row['completed_at'] else None,
+                    cancelled_at=datetime.fromisoformat(row['cancelled_at']) if row['cancelled_at'] else None,
+                )
+            return None
+    
+    async def update_meeting_status(self, meeting_id: str, status, timestamp=None):
+        """Update meeting status."""
+        if timestamp is None:
+            timestamp = datetime.now()
+        
+        status_field = None
+        if status.value == 'COMPLETED':
+            status_field = 'completed_at'
+        elif status.value == 'CANCELLED':
+            status_field = 'cancelled_at'
+        
+        if status_field:
+            await self.conn.execute(f"""
+                UPDATE meetings 
+                SET status = ?, {status_field} = ?
+                WHERE meeting_id = ?
+            """, (status.value, timestamp.isoformat(), meeting_id))
+        else:
+            await self.conn.execute("""
+                UPDATE meetings 
+                SET status = ?
+                WHERE meeting_id = ?
+            """, (status.value, meeting_id))
+        
+        await self.conn.commit()
+    
+    async def update_meeting_reminder(self, meeting_id: str, reminder_type: str, timestamp):
+        """Update meeting reminder timestamp."""
+        field_map = {
+            '24h': 'reminded_24h_at',
+            '1h': 'reminded_1h_at',
+            '15m': 'reminded_15m_at'
+        }
+        
+        field = field_map.get(reminder_type)
+        if not field:
+            logger.error(f"Invalid reminder type: {reminder_type}")
+            return
+        
+        await self.conn.execute(f"""
+            UPDATE meetings 
+            SET {field} = ?
+            WHERE meeting_id = ?
+        """, (timestamp.isoformat(), meeting_id))
+        await self.conn.commit()
+    
+    async def update_meeting_notes_link(self, meeting_id: str, notes_message_id: int):
+        """Link meeting notes message to meeting."""
+        await self.conn.execute("""
+            UPDATE meetings 
+            SET notes_message_id = ?
+            WHERE meeting_id = ?
+        """, (notes_message_id, meeting_id))
+        await self.conn.commit()
+    
+    async def cancel_meeting(self, meeting_id: str, reason: str, cancelled_at):
+        """Cancel a meeting."""
+        from src.data.models import MeetingStatus
+        await self.conn.execute("""
+            UPDATE meetings 
+            SET status = ?, cancelled_reason = ?, cancelled_at = ?
+            WHERE meeting_id = ?
+        """, (MeetingStatus.CANCELLED.value, reason, cancelled_at.isoformat(), meeting_id))
+        await self.conn.commit()
+    
+    async def reschedule_meeting(self, meeting_id: str, new_meeting_id: str):
+        """Mark meeting as rescheduled."""
+        from src.data.models import MeetingStatus
+        await self.conn.execute("""
+            UPDATE meetings 
+            SET status = ?, rescheduled_to = ?
+            WHERE meeting_id = ?
+        """, (MeetingStatus.RESCHEDULED.value, new_meeting_id, meeting_id))
+        await self.conn.commit()
+    
+    async def get_meetings_after_date(self, after_date):
+        """Get all meetings after a specific date."""
+        await self.conn.commit()
+        async with self.conn.execute(
+            "SELECT * FROM meetings WHERE date > ? ORDER BY date ASC",
+            (after_date.isoformat(),)
+        ) as cursor:
+            rows = await cursor.fetchall()
+            from src.data.models import Meeting, MeetingStatus, MeetingPriority
+            return [
+                Meeting(
+                    meeting_id=row['meeting_id'],
+                    title=row['title'],
+                    date=datetime.fromisoformat(row['date']),
+                    duration_minutes=row['duration_minutes'],
+                    location=row['location'],
+                    organizer_id=row['organizer_id'],
+                    agenda=row['agenda'],
+                    priority=MeetingPriority(row['priority']),
+                    status=MeetingStatus(row['status']),
+                    created_at=datetime.fromisoformat(row['created_at']),
+                    message_id=row['message_id'],
+                    topic_id=row['topic_id'],
+                    preparation=row['preparation'],
+                    notes_message_id=row['notes_message_id'],
+                    cancelled_reason=row['cancelled_reason'],
+                    rescheduled_to=row['rescheduled_to'],
+                    reminded_24h_at=datetime.fromisoformat(row['reminded_24h_at']) if row['reminded_24h_at'] else None,
+                    reminded_1h_at=datetime.fromisoformat(row['reminded_1h_at']) if row['reminded_1h_at'] else None,
+                    reminded_15m_at=datetime.fromisoformat(row['reminded_15m_at']) if row['reminded_15m_at'] else None,
+                    completed_at=datetime.fromisoformat(row['completed_at']) if row['completed_at'] else None,
+                    cancelled_at=datetime.fromisoformat(row['cancelled_at']) if row['cancelled_at'] else None,
+                )
+                for row in rows
+            ]
+    
+    async def get_meetings_by_organizer(self, organizer_id: int):
+        """Get all meetings organized by a user."""
+        await self.conn.commit()
+        async with self.conn.execute(
+            "SELECT * FROM meetings WHERE organizer_id = ? ORDER BY date DESC",
+            (organizer_id,)
+        ) as cursor:
+            rows = await cursor.fetchall()
+            from src.data.models import Meeting, MeetingStatus, MeetingPriority
+            return [
+                Meeting(
+                    meeting_id=row['meeting_id'],
+                    title=row['title'],
+                    date=datetime.fromisoformat(row['date']),
+                    duration_minutes=row['duration_minutes'],
+                    location=row['location'],
+                    organizer_id=row['organizer_id'],
+                    agenda=row['agenda'],
+                    priority=MeetingPriority(row['priority']),
+                    status=MeetingStatus(row['status']),
+                    created_at=datetime.fromisoformat(row['created_at']),
+                    message_id=row['message_id'],
+                    topic_id=row['topic_id'],
+                    preparation=row['preparation'],
+                    notes_message_id=row['notes_message_id'],
+                    cancelled_reason=row['cancelled_reason'],
+                    rescheduled_to=row['rescheduled_to'],
+                    reminded_24h_at=datetime.fromisoformat(row['reminded_24h_at']) if row['reminded_24h_at'] else None,
+                    reminded_1h_at=datetime.fromisoformat(row['reminded_1h_at']) if row['reminded_1h_at'] else None,
+                    reminded_15m_at=datetime.fromisoformat(row['reminded_15m_at']) if row['reminded_15m_at'] else None,
+                    completed_at=datetime.fromisoformat(row['completed_at']) if row['completed_at'] else None,
+                    cancelled_at=datetime.fromisoformat(row['cancelled_at']) if row['cancelled_at'] else None,
+                )
+                for row in rows
+            ]
+    
+    async def get_meetings_by_status(self, status):
+        """Get all meetings with a specific status."""
+        await self.conn.commit()
+        async with self.conn.execute(
+            "SELECT * FROM meetings WHERE status = ? ORDER BY date ASC",
+            (status.value,)
+        ) as cursor:
+            rows = await cursor.fetchall()
+            from src.data.models import Meeting, MeetingStatus, MeetingPriority
+            return [
+                Meeting(
+                    meeting_id=row['meeting_id'],
+                    title=row['title'],
+                    date=datetime.fromisoformat(row['date']),
+                    duration_minutes=row['duration_minutes'],
+                    location=row['location'],
+                    organizer_id=row['organizer_id'],
+                    agenda=row['agenda'],
+                    priority=MeetingPriority(row['priority']),
+                    status=MeetingStatus(row['status']),
+                    created_at=datetime.fromisoformat(row['created_at']),
+                    message_id=row['message_id'],
+                    topic_id=row['topic_id'],
+                    preparation=row['preparation'],
+                    notes_message_id=row['notes_message_id'],
+                    cancelled_reason=row['cancelled_reason'],
+                    rescheduled_to=row['rescheduled_to'],
+                    reminded_24h_at=datetime.fromisoformat(row['reminded_24h_at']) if row['reminded_24h_at'] else None,
+                    reminded_1h_at=datetime.fromisoformat(row['reminded_1h_at']) if row['reminded_1h_at'] else None,
+                    reminded_15m_at=datetime.fromisoformat(row['reminded_15m_at']) if row['reminded_15m_at'] else None,
+                    completed_at=datetime.fromisoformat(row['completed_at']) if row['completed_at'] else None,
+                    cancelled_at=datetime.fromisoformat(row['cancelled_at']) if row['cancelled_at'] else None,
+                )
+                for row in rows
+            ]
+    
+    async def get_meetings_needing_reminders(self, reminder_type: str, current_time):
+        """Get meetings that need reminders sent."""
+        field_map = {
+            '24h': 'reminded_24h_at',
+            '1h': 'reminded_1h_at',
+            '15m': 'reminded_15m_at'
+        }
+        
+        field = field_map.get(reminder_type)
+        if not field:
+            return []
+        
+        # Calculate time window based on reminder type
+        from datetime import timedelta
+        if reminder_type == '24h':
+            window_start = current_time + timedelta(hours=23, minutes=50)
+            window_end = current_time + timedelta(hours=24, minutes=10)
+        elif reminder_type == '1h':
+            window_start = current_time + timedelta(minutes=50)
+            window_end = current_time + timedelta(minutes=70)
+        else:  # 15m
+            window_start = current_time + timedelta(minutes=10)
+            window_end = current_time + timedelta(minutes=20)
+        
+        await self.conn.commit()
+        async with self.conn.execute(f"""
+            SELECT * FROM meetings 
+            WHERE status = 'SCHEDULED' 
+            AND {field} IS NULL
+            AND date BETWEEN ? AND ?
+            ORDER BY date ASC
+        """, (window_start.isoformat(), window_end.isoformat())) as cursor:
+            rows = await cursor.fetchall()
+            from src.data.models import Meeting, MeetingStatus, MeetingPriority
+            return [
+                Meeting(
+                    meeting_id=row['meeting_id'],
+                    title=row['title'],
+                    date=datetime.fromisoformat(row['date']),
+                    duration_minutes=row['duration_minutes'],
+                    location=row['location'],
+                    organizer_id=row['organizer_id'],
+                    agenda=row['agenda'],
+                    priority=MeetingPriority(row['priority']),
+                    status=MeetingStatus(row['status']),
+                    created_at=datetime.fromisoformat(row['created_at']),
+                    message_id=row['message_id'],
+                    topic_id=row['topic_id'],
+                    preparation=row['preparation'],
+                    notes_message_id=row['notes_message_id'],
+                    cancelled_reason=row['cancelled_reason'],
+                    rescheduled_to=row['rescheduled_to'],
+                    reminded_24h_at=datetime.fromisoformat(row['reminded_24h_at']) if row['reminded_24h_at'] else None,
+                    reminded_1h_at=datetime.fromisoformat(row['reminded_1h_at']) if row['reminded_1h_at'] else None,
+                    reminded_15m_at=datetime.fromisoformat(row['reminded_15m_at']) if row['reminded_15m_at'] else None,
+                    completed_at=datetime.fromisoformat(row['completed_at']) if row['completed_at'] else None,
+                    cancelled_at=datetime.fromisoformat(row['cancelled_at']) if row['cancelled_at'] else None,
+                )
+                for row in rows
+            ]
+    
+    # ============================================================================
+    # MEETING ATTENDEE OPERATIONS
+    # ============================================================================
+    
+    async def insert_meeting_attendee(self, attendee):
+        """Insert a meeting attendee."""
+        try:
+            await self.conn.execute("""
+                INSERT INTO meeting_attendees (
+                    meeting_id, user_id, status, invited_at, responded_at
+                ) VALUES (?, ?, ?, ?, ?)
+            """, (
+                attendee.meeting_id,
+                attendee.user_id,
+                attendee.status.value,
+                attendee.invited_at.isoformat(),
+                attendee.responded_at.isoformat() if attendee.responded_at else None,
+            ))
+            await self.conn.commit()
+        except Exception as e:
+            logger.error(f"❌ Error inserting meeting attendee: {e}")
+            raise
+    
+    async def update_attendee_status(self, meeting_id: str, user_id: int, status, responded_at):
+        """Update attendee RSVP status."""
+        await self.conn.execute("""
+            UPDATE meeting_attendees 
+            SET status = ?, responded_at = ?
+            WHERE meeting_id = ? AND user_id = ?
+        """, (status.value, responded_at.isoformat(), meeting_id, user_id))
+        await self.conn.commit()
+    
+    async def get_meeting_attendees(self, meeting_id: str):
+        """Get all attendees for a meeting."""
+        await self.conn.commit()
+        async with self.conn.execute(
+            "SELECT * FROM meeting_attendees WHERE meeting_id = ?",
+            (meeting_id,)
+        ) as cursor:
+            rows = await cursor.fetchall()
+            from src.data.models import MeetingAttendee, AttendanceStatus
+            return [
+                MeetingAttendee(
+                    id=row['id'],
+                    meeting_id=row['meeting_id'],
+                    user_id=row['user_id'],
+                    status=AttendanceStatus(row['status']),
+                    invited_at=datetime.fromisoformat(row['invited_at']),
+                    responded_at=datetime.fromisoformat(row['responded_at']) if row['responded_at'] else None,
+                )
+                for row in rows
+            ]
+    
+    async def get_meeting_attendee(self, meeting_id: str, user_id: int):
+        """Get specific attendee record."""
+        await self.conn.commit()
+        async with self.conn.execute(
+            "SELECT * FROM meeting_attendees WHERE meeting_id = ? AND user_id = ?",
+            (meeting_id, user_id)
+        ) as cursor:
+            row = await cursor.fetchone()
+            if row:
+                from src.data.models import MeetingAttendee, AttendanceStatus
+                return MeetingAttendee(
+                    id=row['id'],
+                    meeting_id=row['meeting_id'],
+                    user_id=row['user_id'],
+                    status=AttendanceStatus(row['status']),
+                    invited_at=datetime.fromisoformat(row['invited_at']),
+                    responded_at=datetime.fromisoformat(row['responded_at']) if row['responded_at'] else None,
+                )
+            return None
+    
+    async def get_user_meetings(self, user_id: int, after_date=None):
+        """Get all meetings a user is invited to."""
+        await self.conn.commit()
+        if after_date:
+            async with self.conn.execute("""
+                SELECT m.* FROM meetings m
+                JOIN meeting_attendees ma ON m.meeting_id = ma.meeting_id
+                WHERE ma.user_id = ? AND m.date > ?
+                ORDER BY m.date ASC
+            """, (user_id, after_date.isoformat())) as cursor:
+                rows = await cursor.fetchall()
+        else:
+            async with self.conn.execute("""
+                SELECT m.* FROM meetings m
+                JOIN meeting_attendees ma ON m.meeting_id = ma.meeting_id
+                WHERE ma.user_id = ?
+                ORDER BY m.date DESC
+            """, (user_id,)) as cursor:
+                rows = await cursor.fetchall()
+        
+        from src.data.models import Meeting, MeetingStatus, MeetingPriority
+        return [
+            Meeting(
+                meeting_id=row['meeting_id'],
+                title=row['title'],
+                date=datetime.fromisoformat(row['date']),
+                duration_minutes=row['duration_minutes'],
+                location=row['location'],
+                organizer_id=row['organizer_id'],
+                agenda=row['agenda'],
+                priority=MeetingPriority(row['priority']),
+                status=MeetingStatus(row['status']),
+                created_at=datetime.fromisoformat(row['created_at']),
+                message_id=row['message_id'],
+                topic_id=row['topic_id'],
+                preparation=row['preparation'],
+                notes_message_id=row['notes_message_id'],
+                cancelled_reason=row['cancelled_reason'],
+                rescheduled_to=row['rescheduled_to'],
+                reminded_24h_at=datetime.fromisoformat(row['reminded_24h_at']) if row['reminded_24h_at'] else None,
+                reminded_1h_at=datetime.fromisoformat(row['reminded_1h_at']) if row['reminded_1h_at'] else None,
+                reminded_15m_at=datetime.fromisoformat(row['reminded_15m_at']) if row['reminded_15m_at'] else None,
+                completed_at=datetime.fromisoformat(row['completed_at']) if row['completed_at'] else None,
+                cancelled_at=datetime.fromisoformat(row['cancelled_at']) if row['cancelled_at'] else None,
+            )
+            for row in rows
+        ]
+    
+    # ============================================================================
+    # MEETING NOTES OPERATIONS
+    # ============================================================================
+    
+    async def insert_meeting_notes(self, notes):
+        """Insert meeting notes."""
+        try:
+            await self.conn.execute("""
+                INSERT INTO meeting_notes (
+                    meeting_id, posted_by, posted_at, message_id,
+                    attendees_present, decisions, action_items, next_meeting_date
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                notes.meeting_id,
+                notes.posted_by,
+                notes.posted_at.isoformat(),
+                notes.message_id,
+                notes.attendees_present,
+                notes.decisions,
+                notes.action_items,
+                notes.next_meeting_date.isoformat() if notes.next_meeting_date else None,
+            ))
+            await self.conn.commit()
+        except Exception as e:
+            logger.error(f"❌ Error inserting meeting notes: {e}")
+            raise
+    
+    async def get_meeting_notes_by_meeting_id(self, meeting_id: str):
+        """Get meeting notes by meeting ID."""
+        await self.conn.commit()
+        async with self.conn.execute(
+            "SELECT * FROM meeting_notes WHERE meeting_id = ?",
+            (meeting_id,)
+        ) as cursor:
+            row = await cursor.fetchone()
+            if row:
+                from src.data.models import MeetingNotes
+                return MeetingNotes(
+                    id=row['id'],
+                    meeting_id=row['meeting_id'],
+                    posted_by=row['posted_by'],
+                    posted_at=datetime.fromisoformat(row['posted_at']),
+                    message_id=row['message_id'],
+                    attendees_present=row['attendees_present'],
+                    decisions=row['decisions'],
+                    action_items=row['action_items'],
+                    next_meeting_date=datetime.fromisoformat(row['next_meeting_date']) if row['next_meeting_date'] else None,
+                )
+            return None
+    
+    async def get_meeting_notes_by_message_id(self, message_id: int):
+        """Get meeting notes by message ID."""
+        await self.conn.commit()
+        async with self.conn.execute(
+            "SELECT * FROM meeting_notes WHERE message_id = ?",
+            (message_id,)
+        ) as cursor:
+            row = await cursor.fetchone()
+            if row:
+                from src.data.models import MeetingNotes
+                return MeetingNotes(
+                    id=row['id'],
+                    meeting_id=row['meeting_id'],
+                    posted_by=row['posted_by'],
+                    posted_at=datetime.fromisoformat(row['posted_at']),
+                    message_id=row['message_id'],
+                    attendees_present=row['attendees_present'],
+                    decisions=row['decisions'],
+                    action_items=row['action_items'],
+                    next_meeting_date=datetime.fromisoformat(row['next_meeting_date']) if row['next_meeting_date'] else None,
+                )
+            return None
+    
+    # ============================================================================
+    # MEETING REACTION OPERATIONS
+    # ============================================================================
+    
+    async def insert_meeting_reaction(self, reaction):
+        """Insert a meeting reaction (RSVP)."""
+        try:
+            await self.conn.execute("""
+                INSERT OR REPLACE INTO meeting_reactions (
+                    meeting_id, message_id, user_id, reaction, timestamp
+                ) VALUES (?, ?, ?, ?, ?)
+            """, (
+                reaction.meeting_id,
+                reaction.message_id,
+                reaction.user_id,
+                reaction.reaction,
+                reaction.timestamp.isoformat(),
+            ))
+            await self.conn.commit()
+        except Exception as e:
+            logger.error(f"❌ Error inserting meeting reaction: {e}")
+            raise
+    
+    async def remove_meeting_reaction(self, meeting_id: str, user_id: int, reaction: str):
+        """Remove a meeting reaction."""
+        await self.conn.execute("""
+            DELETE FROM meeting_reactions 
+            WHERE meeting_id = ? AND user_id = ? AND reaction = ?
+        """, (meeting_id, user_id, reaction))
+        await self.conn.commit()
+    
+    async def get_meeting_reactions(self, meeting_id: str):
+        """Get all reactions for a meeting."""
+        await self.conn.commit()
+        async with self.conn.execute(
+            "SELECT * FROM meeting_reactions WHERE meeting_id = ? ORDER BY timestamp ASC",
+            (meeting_id,)
+        ) as cursor:
+            rows = await cursor.fetchall()
+            from src.data.models import MeetingReaction
+            return [
+                MeetingReaction(
+                    id=row['id'],
+                    meeting_id=row['meeting_id'],
+                    message_id=row['message_id'],
+                    user_id=row['user_id'],
+                    reaction=row['reaction'],
+                    timestamp=datetime.fromisoformat(row['timestamp']),
+                )
+                for row in rows
+            ]
+    
+    async def get_user_meeting_reactions(self, meeting_id: str, user_id: int):
+        """Get user's reactions for a meeting."""
+        await self.conn.commit()
+        async with self.conn.execute(
+            "SELECT * FROM meeting_reactions WHERE meeting_id = ? AND user_id = ? ORDER BY timestamp DESC",
+            (meeting_id, user_id)
+        ) as cursor:
+            rows = await cursor.fetchall()
+            from src.data.models import MeetingReaction
+            return [
+                MeetingReaction(
+                    id=row['id'],
+                    meeting_id=row['meeting_id'],
+                    message_id=row['message_id'],
+                    user_id=row['user_id'],
+                    reaction=row['reaction'],
+                    timestamp=datetime.fromisoformat(row['timestamp']),
+                )
+                for row in rows
+            ]

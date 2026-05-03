@@ -1,20 +1,195 @@
 # 🤖 Povaly Bot Management Guide
 
-Complete guide for managing the Telegram bot on Hostinger server.
+Complete guide for managing the Telegram bot locally and on Hostinger server.
 
 ---
 
 ## 📋 Table of Contents
-1. [Initial Setup](#initial-setup)
-2. [Development Workflow](#development-workflow)
-3. [Server Management](#server-management)
-4. [Daily Operations](#daily-operations)
-5. [Troubleshooting](#troubleshooting)
-6. [How It Works](#how-it-works)
+1. [Local Development](#local-development)
+2. [Initial Server Setup](#initial-server-setup)
+3. [Development Workflow](#development-workflow)
+4. [Server Management](#server-management)
+5. [Daily Operations](#daily-operations)
+6. [Database Management](#database-management)
+7. [Troubleshooting](#troubleshooting)
+8. [How It Works](#how-it-works)
 
 ---
 
-## 🚀 Initial Setup (Run Once)
+## 💻 Local Development
+
+### Prerequisites
+- Python 3.8+
+- Git
+- Virtual environment (recommended)
+
+### Initial Setup
+
+1. **Clone Repository:**
+   ```bash
+   git clone <repository-url>
+   cd povaly-bot
+   ```
+
+2. **Create Virtual Environment (Optional but Recommended):**
+   ```bash
+   # Windows
+   python -m venv venv
+   venv\Scripts\activate
+
+   # Linux/Mac
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
+
+3. **Install Dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Configure Environment:**
+   ```bash
+   # Copy template
+   cp .env.template .env
+
+   # Edit .env with your settings
+   # Windows: notepad .env
+   # Linux/Mac: nano .env
+   ```
+
+5. **Run Bot:**
+   ```bash
+   python -m src.main
+   ```
+
+### Local Bot Control Commands
+
+#### Windows PowerShell
+
+**Start Bot:**
+```powershell
+python -m src.main
+```
+
+**Stop Bot:**
+```powershell
+# Press Ctrl+C in the terminal
+```
+
+**Clear Database:**
+```powershell
+# Backup database
+Copy-Item data\povaly_erp_bot.db data\backups\backup_$(Get-Date -Format 'yyyyMMdd_HHmmss').db
+
+# Delete database
+Remove-Item data\povaly_erp_bot.db
+
+# Start bot (creates fresh database)
+python -m src.main
+```
+
+**View Logs:**
+```powershell
+# View recent logs
+Get-Content data\logs\telegram_bot.log -Tail 50
+
+# Follow logs in real-time
+Get-Content data\logs\telegram_bot.log -Wait -Tail 50
+```
+
+**Check Database:**
+```powershell
+sqlite3 data\povaly_erp_bot.db
+# Inside SQLite:
+# .tables          - List all tables
+# .schema tasks    - Show table structure
+# SELECT * FROM tasks LIMIT 10;
+# .quit            - Exit
+```
+
+#### Linux/Mac Bash
+
+**Start Bot:**
+```bash
+python3 -m src.main
+```
+
+**Stop Bot:**
+```bash
+# Press Ctrl+C in the terminal
+# Or from another terminal:
+pkill -f "python3 -m src.main"
+```
+
+**Clear Database:**
+```bash
+# Backup database
+cp data/povaly_erp_bot.db data/backups/backup_$(date +%Y%m%d_%H%M%S).db
+
+# Delete database
+rm data/povaly_erp_bot.db
+
+# Start bot (creates fresh database)
+python3 -m src.main
+```
+
+**View Logs:**
+```bash
+# View recent logs
+tail -50 data/logs/telegram_bot.log
+
+# Follow logs in real-time
+tail -f data/logs/telegram_bot.log
+```
+
+**Check Database:**
+```bash
+sqlite3 data/povaly_erp_bot.db
+# Inside SQLite:
+# .tables          - List all tables
+# .schema tasks    - Show table structure
+# SELECT * FROM tasks LIMIT 10;
+# .quit            - Exit
+```
+
+### Local Testing Workflow
+
+1. **Make Code Changes**
+2. **Stop Bot** (Ctrl+C)
+3. **Clear Database** (optional, for fresh testing)
+4. **Start Bot**
+5. **Test in Telegram**
+6. **Check Logs** for errors
+7. **Repeat** until working
+
+### Common Local Commands
+
+```bash
+# Check Python version
+python --version
+
+# Install/Update dependencies
+pip install -r requirements.txt
+
+# Run tests (if available)
+pytest
+
+# Check code style
+flake8 src/
+
+# Format code
+black src/
+
+# Git workflow
+git status
+git add .
+git commit -m "Description"
+git push origin main
+```
+
+---
+
+## 🚀 Initial Server Setup (Run Once)
 
 ### Step 1: Connect to Server
 ```bash
@@ -242,6 +417,94 @@ Press `Ctrl+C` to stop following logs.
 
 ## 🗄️ Database Management
 
+### Local Database Management
+
+#### Clear Database (Fresh Start)
+
+**Windows PowerShell:**
+```powershell
+# Stop bot (Ctrl+C)
+
+# Backup
+Copy-Item data\povaly_erp_bot.db data\backups\backup_$(Get-Date -Format 'yyyyMMdd_HHmmss').db
+
+# Delete
+Remove-Item data\povaly_erp_bot.db
+
+# Start bot
+python -m src.main
+```
+
+**Linux/Mac:**
+```bash
+# Stop bot (Ctrl+C)
+
+# Backup
+cp data/povaly_erp_bot.db data/backups/backup_$(date +%Y%m%d_%H%M%S).db
+
+# Delete
+rm data/povaly_erp_bot.db
+
+# Start bot
+python3 -m src.main
+```
+
+#### Inspect Database
+
+**Open SQLite:**
+```bash
+sqlite3 data/povaly_erp_bot.db
+```
+
+**Useful SQLite Commands:**
+```sql
+-- List all tables
+.tables
+
+-- Show table structure
+.schema tasks
+.schema qa_submissions
+.schema users
+
+-- View data
+SELECT * FROM tasks LIMIT 10;
+SELECT * FROM users;
+SELECT * FROM qa_submissions WHERE status = 'PENDING';
+
+-- Count records
+SELECT COUNT(*) FROM tasks;
+SELECT state, COUNT(*) FROM tasks GROUP BY state;
+
+-- Delete specific data
+DELETE FROM tasks WHERE state = 'ARCHIVED';
+DELETE FROM qa_submissions WHERE status = 'APPROVED';
+
+-- Exit
+.quit
+```
+
+#### Export/Import Database
+
+**Export (Backup):**
+```bash
+# Full backup
+cp data/povaly_erp_bot.db data/backups/backup_$(date +%Y%m%d).db
+
+# Export to SQL
+sqlite3 data/povaly_erp_bot.db .dump > backup.sql
+```
+
+**Import (Restore):**
+```bash
+# Restore from backup
+cp data/backups/backup_20260502.db data/povaly_erp_bot.db
+
+# Import from SQL
+sqlite3 data/povaly_erp_bot.db < backup.sql
+```
+
+### Server Database Management
+
 ### Clear Database (Fresh Start)
 ```bash
 ./clear_db.sh
@@ -406,6 +669,48 @@ povaly-erp-bot/
 
 ## 📝 Quick Reference Card
 
+### Local Development Commands
+
+**Windows PowerShell:**
+```powershell
+# Start bot
+python -m src.main
+
+# Stop bot
+Ctrl+C
+
+# Clear database
+Remove-Item data\povaly_erp_bot.db
+python -m src.main
+
+# View logs
+Get-Content data\logs\telegram_bot.log -Tail 50
+
+# Follow logs
+Get-Content data\logs\telegram_bot.log -Wait -Tail 50
+```
+
+**Linux/Mac:**
+```bash
+# Start bot
+python3 -m src.main
+
+# Stop bot
+Ctrl+C  # or: pkill -f "python3 -m src.main"
+
+# Clear database
+rm data/povaly_erp_bot.db
+python3 -m src.main
+
+# View logs
+tail -50 data/logs/telegram_bot.log
+
+# Follow logs
+tail -f data/logs/telegram_bot.log
+```
+
+### Server Commands
+
 ### Most Used Commands
 
 ```bash
@@ -458,6 +763,129 @@ cd /home/u531179370/povaly-bot/povaly-erp-bot/
 
 ## ✅ Best Practices
 
+### Local Development
+1. **Use virtual environment** to isolate dependencies
+2. **Test locally first** before pushing to server
+3. **Clear database** when testing new features
+4. **Check logs** for errors: `tail -f data/logs/telegram_bot.log`
+5. **Commit frequently** with clear messages
+6. **Keep .env secure** - never commit to git
+7. **Backup database** before major changes
+
+### Server Deployment
+1. **Always test locally first** before deploying to server
+2. **Commit and push** all changes to GitHub
+3. **Use `./deploy.sh`** instead of manual git pull + restart
+4. **Check logs** after deployment: `./logs.sh`
+5. **Backup database** before clearing: `./clear_db.sh` does this automatically
+6. **Never edit code on server** unless emergency (then push to GitHub after)
+7. **Keep .env in sync** between local and server
+8. **Monitor cron logs** occasionally: `tail -50 cron.log`
+
+### Git Workflow
+```bash
+# Local changes
+git status
+git add .
+git commit -m "Feature: description"
+git push origin main
+
+# Server deployment
+ssh -p 65002 u531179370@145.79.25.42
+cd /home/u531179370/povaly-bot/povaly-erp-bot/
+./deploy.sh
+```
+
+---
+
+## 🎯 Development Checklist
+
+### Before Starting Development
+- [ ] Virtual environment activated
+- [ ] Latest code pulled: `git pull origin main`
+- [ ] Dependencies updated: `pip install -r requirements.txt`
+- [ ] .env configured correctly
+- [ ] Database backed up (if needed)
+
+### Before Committing
+- [ ] Code tested locally
+- [ ] No errors in logs
+- [ ] All features working in Telegram
+- [ ] Code formatted (if using formatter)
+- [ ] Meaningful commit message ready
+
+### Before Deploying to Server
+- [ ] All changes committed and pushed
+- [ ] Local testing complete
+- [ ] Breaking changes documented
+- [ ] .env changes noted (if any)
+- [ ] Ready to monitor logs after deployment
+
+---
+
+## 🔍 Debugging Tips
+
+### Local Debugging
+
+**Enable Debug Logging:**
+```python
+# In src/main.py or config
+logging.basicConfig(level=logging.DEBUG)
+```
+
+**Check Specific Logs:**
+```bash
+# Error logs only
+grep "ERROR" data/logs/telegram_bot.log
+
+# Specific feature
+grep "QA" data/logs/telegram_bot.log
+
+# Recent errors
+tail -100 data/logs/telegram_bot.log | grep "ERROR"
+```
+
+**Test Database Queries:**
+```bash
+sqlite3 data/povaly_erp_bot.db
+SELECT * FROM tasks WHERE state = 'QA_SUBMITTED';
+SELECT * FROM qa_submissions WHERE status = 'PENDING';
+.quit
+```
+
+**Python Interactive Testing:**
+```python
+# Start Python REPL
+python
+
+# Import and test
+from src.config import Config
+config = Config()
+print(config.TELEGRAM_BOT_TOKEN)
+```
+
+### Common Issues
+
+**Bot won't start:**
+- Check .env file exists and has correct values
+- Check Python version: `python --version`
+- Check dependencies: `pip install -r requirements.txt`
+- Check logs: `tail -50 data/logs/telegram_bot.log`
+
+**Database errors:**
+- Delete and recreate: `rm data/povaly_erp_bot.db`
+- Check permissions: `ls -la data/`
+- Check disk space: `df -h`
+
+**Import errors:**
+- Reinstall dependencies: `pip install -r requirements.txt`
+- Check virtual environment is activated
+- Check Python path: `echo $PYTHONPATH`
+
+---
+
+## ✅ Best Practices
+
 1. **Always test locally first** before deploying to server
 2. **Commit and push** all changes to GitHub
 3. **Use `./deploy.sh`** instead of manual git pull + restart
@@ -484,6 +912,8 @@ cd /home/u531179370/povaly-bot/povaly-erp-bot/
 
 ---
 
-**Last Updated:** 2026-05-02  
-**Bot Version:** 1.0  
-**Server:** Hostinger (145.79.25.42:65002)
+**Last Updated:** 2026-05-03  
+**Bot Version:** 2.0  
+**Features:** COMPLETED state, Auto-delete DMs, Smart reaction detection  
+**Server:** Hostinger (145.79.25.42:65002)  
+**Local Development:** Windows PowerShell / Linux Bash

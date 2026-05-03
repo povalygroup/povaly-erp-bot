@@ -15,7 +15,7 @@ async def send_auto_delete_dm(context, user_id, text, parse_mode='Markdown',
         context: Telegram context
         user_id: User ID to send DM to
         text: Message text
-        parse_mode: Parse mode (Markdown, HTML, etc.)
+        parse_mode: Parse mode (Markdown, HTML, None for plain text)
         delete_after_seconds: Seconds before auto-delete
         disable_web_page_preview: Whether to disable link previews
     
@@ -23,8 +23,15 @@ async def send_auto_delete_dm(context, user_id, text, parse_mode='Markdown',
         Sent message object or None if failed
     """
     try:
-        # Add auto-delete warning to message
-        warning = f"\n\n_⏱️ This message will auto-delete in {delete_after_seconds} seconds_"
+        # Add auto-delete warning to message (format based on parse_mode)
+        if parse_mode == 'Markdown':
+            warning = f"\n\n_⏱️ This message will auto-delete in {delete_after_seconds} seconds_"
+        elif parse_mode == 'HTML':
+            warning = f"\n\n<i>⏱️ This message will auto-delete in {delete_after_seconds} seconds</i>"
+        else:
+            # Plain text (no formatting)
+            warning = f"\n\n⏱️ This message will auto-delete in {delete_after_seconds} seconds"
+        
         full_text = text + warning
         
         sent_msg = await context.bot.send_message(

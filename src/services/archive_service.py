@@ -72,6 +72,10 @@ class ArchiveService:
         """Background loop for checking and archiving completed tasks."""
         logger.info("Started archive monitoring loop")
         
+        # Wait 60 seconds before first check to avoid startup noise
+        logger.info("Waiting 60 seconds before first archive check...")
+        await asyncio.sleep(60)
+        
         while self.running:
             try:
                 await self._check_and_archive_tasks()
@@ -88,6 +92,10 @@ class ArchiveService:
         """Background loop for reminding assignees to mark tasks complete."""
         logger.info("Started completion reminder loop")
         
+        # Wait 60 seconds before first check to avoid startup noise
+        logger.info("Waiting 60 seconds before first reminder check...")
+        await asyncio.sleep(60)
+        
         while self.running:
             try:
                 await self._check_and_remind_assignees()
@@ -103,30 +111,27 @@ class ArchiveService:
     async def _check_and_archive_tasks(self):
         """Check for tasks ready to archive and archive them."""
         try:
-            # Get all approved tasks
+            # Get all completed tasks
             all_tasks = await self.task_service.task_repo.get_all_tasks()
-            approved_tasks = [t for t in all_tasks if t.state == TaskState.APPROVED]
+            completed_tasks = [t for t in all_tasks if t.state == TaskState.COMPLETED]
             
-            if not approved_tasks:
+            if not completed_tasks:
                 return
             
-            logger.debug(f"Found {len(approved_tasks)} approved tasks to check for archiving")
+            logger.debug(f"Found {len(completed_tasks)} completed tasks to check for archiving")
             
-            for task in approved_tasks:
-                # Check if task has assignee love reaction (completion confirmation)
-                has_completion = await self._has_assignee_love_reaction(task)
-                
-                if has_completion:
-                    # Check if enough time has passed since approval
-                    if task.qa_submitted_at:
-                        time_since_approval = datetime.now() - task.qa_submitted_at
-                        hours_since_approval = time_since_approval.total_seconds() / 3600
-                        
-                        if hours_since_approval >= self.archive_delay_hours:
-                            await self._archive_task(task)
-                    else:
-                        # No QA timestamp, archive immediately if has completion reaction
+            for task in completed_tasks:
+                # Check if enough time has passed since completion
+                if task.qa_submitted_at:
+                    time_since_completion = datetime.now() - task.qa_submitted_at
+                    hours_since_completion = time_since_completion.total_seconds() / 3600
+                    
+                    if hours_since_completion >= self.archive_delay_hours:
                         await self._archive_task(task)
+                else:
+                    # No QA timestamp, archive after 24 hours from now
+                    # (This shouldn't happen normally, but handle it gracefully)
+                    await self._archive_task(task)
                         
         except Exception as e:
             logger.error(f"Error checking tasks for archiving: {e}", exc_info=True)
@@ -134,7 +139,7 @@ class ArchiveService:
     async def _check_and_remind_assignees(self):
         """Check for approved tasks without assignee completion and send reminders."""
         try:
-            # Get all approved tasks
+            # Get all approved tasks (waiting for assignee to confirm completion)
             all_tasks = await self.task_service.task_repo.get_all_tasks()
             approved_tasks = [t for t in all_tasks if t.state == TaskState.APPROVED]
             
@@ -145,10 +150,8 @@ class ArchiveService:
             tasks_needing_reminder = []
             
             for task in approved_tasks:
-                # Check if task has assignee love reaction
-                has_completion = await self._has_assignee_love_reaction(task)
-                
-                if not has_completion and task.qa_submitted_at:
+                # All APPROVED tasks need completion confirmation
+                if task.qa_submitted_at:
                     # Check if enough time has passed since approval
                     time_since_approval = now - task.qa_submitted_at
                     hours_since_approval = time_since_approval.total_seconds() / 3600
@@ -178,21 +181,7 @@ class ArchiveService:
     async def _has_assignee_love_reaction(self, task: Task) -> bool:
         """Check if the task message has a love reaction from the assignee."""
         try:
-            # Get the task message
-            message = await self.bot_context.bot.forward_message(
-                chat_id=self.config.TELEGRAM_GROUP_ID,
-                from_chat_id=self.config.TELEGRAM_GROUP_ID,
-                message_id=task.message_id
-            )
-            
-            # Delete the forwarded message immediately
-            await message.delete()
-            
-            # Check reactions on original message
-            # Note: We need to fetch the message to check reactions
-            # This is a limitation - we'll track reactions in database instead
-            
-            # For now, check if there's a reaction record in database
+            # Check reactions from database only (no forwarding to avoid notifications)
             reactions = await self.task_service.task_repo.get_task_reactions(task.ticket)
             
             # Check if assignee has reacted with ❤️

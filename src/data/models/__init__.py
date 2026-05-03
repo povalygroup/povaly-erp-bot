@@ -9,6 +9,15 @@ from .report import Report, ReportType
 from .violation import Violation, ViolationType
 from .audit_trail import AuditTrail, EventType
 from .issue import Issue, IssueStatus, IssuePriority
+from .meeting import (
+    Meeting,
+    MeetingStatus,
+    MeetingPriority,
+    MeetingAttendee,
+    AttendanceStatus,
+    MeetingNotes,
+    MeetingReaction,
+)
 
 __all__ = [
     "Task",
@@ -32,4 +41,11 @@ __all__ = [
     "Issue",
     "IssueStatus",
     "IssuePriority",
+    "Meeting",
+    "MeetingStatus",
+    "MeetingPriority",
+    "MeetingAttendee",
+    "AttendanceStatus",
+    "MeetingNotes",
+    "MeetingReaction",
 ]

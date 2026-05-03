@@ -14,6 +14,7 @@ class TaskState(str, Enum):
     QA_SUBMITTED = "QA_SUBMITTED"
     APPROVED = "APPROVED"
     REJECTED = "REJECTED"
+    COMPLETED = "COMPLETED"
     ARCHIVED = "ARCHIVED"
     INACTIVE = "INACTIVE"
 
@@ -35,6 +36,7 @@ class Task:
     started_at: Optional[datetime] = None
     qa_submitted_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
+    deadline: Optional[datetime] = None
     
     # Fire emoji exemption
     has_fire_exemption: bool = False
@@ -55,6 +57,7 @@ class Task:
             "started_at": self.started_at.isoformat() if self.started_at else None,
             "qa_submitted_at": self.qa_submitted_at.isoformat() if self.qa_submitted_at else None,
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "deadline": self.deadline.isoformat() if self.deadline else None,
             "has_fire_exemption": self.has_fire_exemption,
             "fire_exemption_by": self.fire_exemption_by,
             "fire_exemption_at": self.fire_exemption_at.isoformat() if self.fire_exemption_at else None,
@@ -75,6 +78,7 @@ class Task:
             started_at=datetime.fromisoformat(data["started_at"]) if data.get("started_at") else None,
             qa_submitted_at=datetime.fromisoformat(data["qa_submitted_at"]) if data.get("qa_submitted_at") else None,
             completed_at=datetime.fromisoformat(data["completed_at"]) if data.get("completed_at") else None,
+            deadline=datetime.fromisoformat(data["deadline"]) if data.get("deadline") else None,
             has_fire_exemption=data.get("has_fire_exemption", False),
             fire_exemption_by=data.get("fire_exemption_by"),
             fire_exemption_at=datetime.fromisoformat(data["fire_exemption_at"]) if data.get("fire_exemption_at") else None,

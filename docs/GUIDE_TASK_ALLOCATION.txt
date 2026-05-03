@@ -1,6 +1,10 @@
 📋 TASK ALLOCATION GUIDE — COMPLETE WORKFLOW
 
+═══════════════════════════════════════════════════════
+
 👑 FOR ADMINISTRATORS / MANAGERS / OWNERS
+
+═══════════════════════════════════════════════════════
 
 🎯 CREATE & ASSIGN TASKS
 
@@ -19,11 +23,20 @@
 [BRAND] #VorosaBajar
 [TASK] Product page SEO optimization
 [ASSIGNEE] @username
-[DEADLINE] 28 Apr 2026 | 6:00 PM GMT+6
+[DEADLINE] 05 May 2026 | 10:30 PM GMT+6
 [RESOURCES] Google Doc Link
 
 Required: [TICKET], [ASSIGNEE]
 Optional: [BRAND], [TASK], [DEADLINE], [RESOURCES]
+
+💡 DEADLINE FORMAT: DD MMM YYYY | HH:MM AM/PM GMT+6
+Examples:
+• 05 May 2026 | 10:30 PM GMT+6
+• 15 Dec 2025 | 02:45 PM GMT+6
+• 28 Apr 2026 | 11:00 AM GMT+6
+
+Note: Template auto-includes example deadline (today 10:30 PM)
+You can modify, keep, or remove it as needed
 
 🔢 TICKET FORMAT: BRANDYYMM##
 
@@ -31,19 +44,22 @@ POV260401 → Povaly, April 2026, Task #01
 VRB260515 → VorosaBajar, May 2026, Task #15
 GSM260203 → GSMAura, February 2026, Task #03
 
-👥 ASSIGNMENT OPTIONS:
+─────────────────────────────────────────────────────
+
+👥 ASSIGNMENT OPTIONS
 
 Single: [ASSIGNEE] @john.doe
 Multiple: [ASSIGNEE] @john.doe, @jane.smith
 Bulk: /bulkassign @user1,@user2,@user3 POV260501
 
-⏰ DEADLINE REMINDERS (AUTOMATIC)
+Result:
+✅ POV260501 assigned to @user1
+✅ POV260501 assigned to @user2
+✅ POV260501 assigned to @user3
 
-24-HOUR REMINDER: "Task POV260501 due tomorrow"
-1-HOUR REMINDER: "Task POV260501 due in 1 hour!"
-OVERDUE ALERT: "Task POV260501 is overdue by X hours"
+Each user gets individual DM
 
-All reminders auto-delete after 5-10 minutes
+─────────────────────────────────────────────────────
 
 🔗 TASK DEPENDENCIES (BLOCKING TASKS)
 
@@ -56,16 +72,17 @@ All reminders auto-delete after 5-10 minutes
 
 View blocked status: /mytasks shows "🔒 BLOCKED BY POV260501"
 
-👥 BULK TASK ASSIGNMENT
+─────────────────────────────────────────────────────
 
-/bulkassign @user1,@user2,@user3 POV260501
+⏰ DEADLINE REMINDERS (AUTOMATIC)
 
-Result:
-✅ POV260501 assigned to @user1
-✅ POV260501 assigned to @user2
-✅ POV260501 assigned to @user3
+24-HOUR REMINDER: "Task POV260501 due tomorrow"
+1-HOUR REMINDER: "Task POV260501 due in 1 hour!"
+OVERDUE ALERT: "Task POV260501 is overdue by X hours"
 
-Each user gets individual DM
+All reminders auto-delete after 120 seconds
+
+─────────────────────────────────────────────────────
 
 🤖 SMART TASK ROUTING (AUTO-ASSIGN)
 
@@ -76,43 +93,177 @@ System suggests best assignee based on:
 /workload - View team workload & expertise
 /assignto POV260501 @user - Manual override
 
-📌 PIN MESSAGES:
+─────────────────────────────────────────────────────
+
+📌 PIN MESSAGES
 
 Quick: Type /pin or [PINNED]
 Custom: [PINNED] Your announcement here
 
-⚡ COMMANDS
+─────────────────────────────────────────────────────
 
-/newtask, /brand, /bulkassign, /assignto, /block, /unblock
-/workload, /mytasks, /taskstats, /taskhelp, /help
+⚡ ADMIN COMMANDS
+
+Task Creation:
+/newtask - Create task with template
+/brand - View brand list
+/bulkassign - Assign to multiple users
+/assignto - Manual assignment
+
+Task Management:
+/block - Block task by dependency
+/unblock - Unblock task
+/workload - View team workload
+/cleantasks - Clean orphaned tasks
+/syncdb - Sync database
+/resetdb - Reset database
+/scantopic - Scan topic for tasks
+/dailysummary - Manual daily summary
+
+═══════════════════════════════════════════════════════
 
 👷 FOR EMPLOYEES
 
-📝 YOUR WORKFLOW:
+═══════════════════════════════════════════════════════
 
-STEP 1 - Acknowledge Task:
+📝 COMPLETE TASK WORKFLOW
+
+STEP 1 - ASSIGNED → STARTED
 React 👍 on task message
-Confirms receipt, marks work started
+→ Task state: ASSIGNED → STARTED
+→ Auto check-in (if first task of day)
+→ Confirms you're working on it
 
-STEP 2 - Check Deadline:
-Receive 24-hour reminder DM
-Receive 1-hour urgent reminder DM
+STEP 2 - WORK IN PROGRESS
+Keep 👍 reaction as reminder (optional)
+→ You can add/remove 👍 freely
+→ No notifications for add/remove
+→ Use as personal marker
 
-STEP 3 - Check Dependencies:
-If task shows 🔒 BLOCKED, wait for blocker
-Cannot submit blocked tasks
-
-STEP 4 - Complete Work:
+STEP 3 - COMPLETE WORK
 Finish according to requirements
+Check deadline reminders in DM
 
-STEP 5 - Submit for Review:
-Go to QA Review topic and submit
+STEP 4 - SUBMIT FOR QA
+Go to QA Review topic
+Use /newqa command or manual format
+→ Task state: STARTED → QA_SUBMITTED
 
-⚠️ Important:
-• React 👍 to tasks assigned to YOU
-• Follow deadline set by manager
-• Check for blocked dependencies
-• Submit complete work only
+STEP 5 - QA APPROVAL
+Reviewer approves with ❤️
+→ Task state: QA_SUBMITTED → APPROVED
+→ You get DM notification (90s auto-delete)
+
+STEP 6 - CONFIRM COMPLETION
+React ❤️ on task message (in Task Allocation)
+→ Task state: APPROVED → COMPLETED
+→ You get DM confirmation (60s auto-delete)
+
+STEP 7 - AUTOMATIC ARCHIVE
+After 24 hours in COMPLETED state
+→ Task state: COMPLETED → ARCHIVED
+→ Task moved to Central Archive
+
+─────────────────────────────────────────────────────
+
+🔄 REACTION SYSTEM
+
+👍 THUMBS UP (Flexible Usage)
+✅ On ASSIGNED: Start task (ASSIGNED → STARTED)
+✅ On STARTED: Allowed (no action, just marker)
+✅ On QA_SUBMITTED: Allowed (no action, just marker)
+✅ On REJECTED: Allowed (no action, just marker)
+❌ On APPROVED: Not allowed (use ❤️ instead)
+❌ On COMPLETED: Not allowed (already done)
+
+Remove 👍 from STARTED:
+→ Reverts to ASSIGNED (only if no other reactions)
+→ DM notification (60s auto-delete)
+
+❤️ HEART (Completion Confirmation)
+✅ On APPROVED: Confirm completion (APPROVED → COMPLETED)
+❌ On other states: Not allowed (see error message)
+
+Remove ❤️ from COMPLETED:
+→ Reverts to APPROVED
+→ DM notification (60s auto-delete)
+
+─────────────────────────────────────────────────────
+
+💡 SMART REACTION DETECTION
+
+If you change 👍 to another reaction (❤️, 👎, 🔥):
+→ NO "unclaim" notification
+→ System knows it's a reaction change, not unclaim
+
+If you remove 👍 with no other reactions:
+→ SENDS "unclaim" notification
+→ System knows it's a true unclaim
+
+This prevents spam notifications!
+
+─────────────────────────────────────────────────────
+
+📊 TASK STATES EXPLAINED
+
+📌 ASSIGNED - Task assigned, not started yet
+⚙️ STARTED - You reacted 👍, work in progress
+🔍 QA_SUBMITTED - Submitted for QA review
+❌ REJECTED - QA rejected, needs fixes
+✅ APPROVED - QA approved, awaiting your confirmation
+🎉 COMPLETED - You confirmed completion with ❤️
+📦 ARCHIVED - Auto-archived after 24 hours
+
+─────────────────────────────────────────────────────
+
+⚡ EMPLOYEE COMMANDS
+
+View Tasks:
+/mytasks - View all your tasks by state
+/tasksbystate - Filter tasks by specific state
+/overduetasks - View overdue tasks
+/taskstats - View your task statistics
+
+Task Actions:
+/newqa - Submit task for QA review
+/support - Get help with task
+
+Debug (if issues):
+/debugtasks - Show what bot sees
+
+─────────────────────────────────────────────────────
+
+🔔 AUTO-DELETE DM NOTIFICATIONS
+
+All DM notifications auto-delete to avoid clutter:
+
+⚡ Quick warnings: 30 seconds
+📝 Standard notifications: 60 seconds
+⚠️ Important notifications: 90 seconds
+🔔 Admin notifications: 120 seconds
+
+Examples:
+• Task unclaimed: 60s
+• Completion confirmed: 60s
+• Invalid reaction warning: 30s
+• Deadline reminders: 120s
+
+─────────────────────────────────────────────────────
+
+⚠️ IMPORTANT NOTES
+
+✓ React 👍 only on tasks assigned to YOU
+✓ You can add/remove 👍 freely on in-progress tasks
+✓ Use ❤️ only after QA approval
+✓ Follow deadlines (get 24h and 1h reminders)
+✓ Check for 🔒 BLOCKED dependencies
+✓ Submit only complete work for QA
+
+✗ Don't react 👍 on APPROVED tasks (use ❤️)
+✗ Don't skip QA submission step
+✗ Don't ignore deadline reminders
+
+─────────────────────────────────────────────────────
 
 ⚠️ TOPIC RULES
 
@@ -121,8 +272,12 @@ Go to QA Review topic and submit
 
 Violations: Malformed messages auto-deleted + DM with instructions
 
+─────────────────────────────────────────────────────
+
 ❓ NEED HELP?
 
 Task unclear? → Use /support in Core Operations
 Need to create task? → Use /newtask command
-Check dependencies? → Use /mytasks command
+Check your tasks? → Use /mytasks command
+View task details? → Use /taskstats command
+General help? → Use /help or /taskhelp

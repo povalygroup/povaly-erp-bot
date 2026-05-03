@@ -51,12 +51,9 @@ Summary generated: 6 PM daily (pinned)
 
 ⚡ COMMANDS
 
-/dailyupdate - Post guided update
-/todaysync - View today's summary
-/syncsummary YYYY-MM-DD - View specific date
-/myblockers - View your blockers
-/teamblockers - View all blockers (managers)
-/syncstats - View statistics
+/dailysummary - Trigger daily summary (admin only)
+
+Note: Daily sync system is currently manual. Post updates in the format above.
 
 👷 FOR EMPLOYEES
 
@@ -64,9 +61,9 @@ WORKFLOW:
 1. Track work throughout day
 2. Note blockers as they arise
 3. Plan tomorrow's work
-4. Post daily update (end of day)
-5. Use /dailyupdate for guided form
-6. Check /todaysync for team progress
+4. Post daily update manually (end of day)
+5. Use the format provided above
+6. Check pinned summary for team progress
 7. Help teammates if possible
 
 ⚠️ Important:
@@ -79,13 +76,13 @@ WORKFLOW:
 👑 FOR MANAGERS
 
 WORKFLOW:
-1. Check /todaysync each morning
+1. Check daily sync topic each morning
 2. Review team progress
 3. Identify blockers
-4. Use /teamblockers for all issues
+4. Review all reported blockers
 5. Reach out to blocked employees
 6. Provide resources
-7. Use /syncstats for metrics
+7. Track metrics manually
 
 ⚠️ Important:
 • Review syncs daily
@@ -117,7 +114,7 @@ When blocker reported:
 
 ❓ NEED HELP?
 
-Unsure format? → Use /dailyupdate command
+Unsure format? → Copy the example format above
 Have blocker? → Include in [BLOCKERS]
 Need help? → Mention who can assist
-See team progress? → Use /todaysync command
+See team progress? → Check pinned daily summary

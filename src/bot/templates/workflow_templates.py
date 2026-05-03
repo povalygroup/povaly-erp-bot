@@ -261,10 +261,19 @@ def format_template(workflow: WorkflowTemplate, **kwargs) -> str:
     Returns:
         Formatted template string
     """
+    from datetime import datetime, timedelta
+    
     lines = []
     for field in workflow.fields:
         field_name = field["name"]
         value = kwargs.get(field_name.lower(), "")
+        
+        # Special handling for DEADLINE field - add example
+        if field_name == "DEADLINE" and not value:
+            # Generate example deadline: today at 10:30 PM
+            example_date = datetime.now()
+            example_deadline = example_date.replace(hour=22, minute=30, second=0, microsecond=0)
+            value = example_deadline.strftime("%d %b %Y | %I:%M %p GMT+6")
         
         # Format the line with # tag for TICKET and BRAND fields for searchability
         if field_name in ["TICKET", "BRAND"]:
