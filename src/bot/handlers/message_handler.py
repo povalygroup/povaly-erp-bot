@@ -326,12 +326,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 # Get full name safely
                 first_name = getattr(message.from_user, 'first_name', None) or username
                 last_name = getattr(message.from_user, 'last_name', None)
+                full_name = f"{first_name} {last_name}".strip() if last_name else first_name
                 
                 new_user = User(
                     user_id=user_id,
                     username=username,
                     first_name=first_name,
                     last_name=last_name,
+                    full_name=full_name,
                     role=UserRole.REGULAR,
                     created_at=datetime.now(),
                     last_active=datetime.now()
