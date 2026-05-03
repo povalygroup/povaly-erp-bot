@@ -14,92 +14,46 @@ async def migrate_up(db):
     try:
         logger.info("Running migration 011: Add employee information and birthday system")
         
+        # Get existing columns
+        cursor = await db.conn.execute("PRAGMA table_info(users)")
+        existing_columns = {row[1] for row in await cursor.fetchall()}
+        logger.info(f"Existing columns in users table: {existing_columns}")
+        
+        # Helper function to add column if it doesn't exist
+        async def add_column_if_not_exists(column_name, column_type, default=None):
+            if column_name not in existing_columns:
+                default_clause = f" DEFAULT {default}" if default is not None else ""
+                await db.conn.execute(f"ALTER TABLE users ADD COLUMN {column_name} {column_type}{default_clause}")
+                logger.info(f"Added column: {column_name}")
+            else:
+                logger.info(f"Column already exists, skipping: {column_name}")
+        
         # Add employee information columns to users table
-        await db.conn.execute("""
-            ALTER TABLE users ADD COLUMN full_name TEXT
-        """)
-        
-        await db.conn.execute("""
-            ALTER TABLE users ADD COLUMN email TEXT
-        """)
-        
-        await db.conn.execute("""
-            ALTER TABLE users ADD COLUMN phone TEXT
-        """)
-        
-        await db.conn.execute("""
-            ALTER TABLE users ADD COLUMN department TEXT
-        """)
-        
-        await db.conn.execute("""
-            ALTER TABLE users ADD COLUMN position TEXT
-        """)
-        
-        await db.conn.execute("""
-            ALTER TABLE users ADD COLUMN join_date TEXT
-        """)
-        
-        await db.conn.execute("""
-            ALTER TABLE users ADD COLUMN emergency_contact TEXT
-        """)
-        
-        await db.conn.execute("""
-            ALTER TABLE users ADD COLUMN blood_group TEXT
-        """)
-        
-        await db.conn.execute("""
-            ALTER TABLE users ADD COLUMN address TEXT
-        """)
-        
-        await db.conn.execute("""
-            ALTER TABLE users ADD COLUMN skills TEXT
-        """)
-        
-        await db.conn.execute("""
-            ALTER TABLE users ADD COLUMN notes TEXT
-        """)
+        await add_column_if_not_exists("full_name", "TEXT")
+        await add_column_if_not_exists("email", "TEXT")
+        await add_column_if_not_exists("phone", "TEXT")
+        await add_column_if_not_exists("department", "TEXT")
+        await add_column_if_not_exists("position", "TEXT")
+        await add_column_if_not_exists("join_date", "TEXT")
+        await add_column_if_not_exists("emergency_contact", "TEXT")
+        await add_column_if_not_exists("blood_group", "TEXT")
+        await add_column_if_not_exists("address", "TEXT")
+        await add_column_if_not_exists("skills", "TEXT")
+        await add_column_if_not_exists("notes", "TEXT")
         
         # Add birthday information columns
-        await db.conn.execute("""
-            ALTER TABLE users ADD COLUMN birth_date TEXT
-        """)
-        
-        await db.conn.execute("""
-            ALTER TABLE users ADD COLUMN birth_day INTEGER
-        """)
-        
-        await db.conn.execute("""
-            ALTER TABLE users ADD COLUMN birth_month INTEGER
-        """)
-        
-        await db.conn.execute("""
-            ALTER TABLE users ADD COLUMN birth_year INTEGER
-        """)
-        
-        await db.conn.execute("""
-            ALTER TABLE users ADD COLUMN birthday_wishes_sent TEXT
-        """)
-        
-        await db.conn.execute("""
-            ALTER TABLE users ADD COLUMN custom_birthday_message TEXT
-        """)
-        
-        await db.conn.execute("""
-            ALTER TABLE users ADD COLUMN birthday_reminder_sent TEXT
-        """)
+        await add_column_if_not_exists("birth_date", "TEXT")
+        await add_column_if_not_exists("birth_day", "INTEGER")
+        await add_column_if_not_exists("birth_month", "INTEGER")
+        await add_column_if_not_exists("birth_year", "INTEGER")
+        await add_column_if_not_exists("birthday_wishes_sent", "TEXT")
+        await add_column_if_not_exists("custom_birthday_message", "TEXT")
+        await add_column_if_not_exists("birthday_reminder_sent", "TEXT")
         
         # Add metadata columns
-        await db.conn.execute("""
-            ALTER TABLE users ADD COLUMN info_set_by TEXT
-        """)
-        
-        await db.conn.execute("""
-            ALTER TABLE users ADD COLUMN info_updated_at TEXT
-        """)
-        
-        await db.conn.execute("""
-            ALTER TABLE users ADD COLUMN info_complete INTEGER DEFAULT 0
-        """)
+        await add_column_if_not_exists("info_set_by", "TEXT")
+        await add_column_if_not_exists("info_updated_at", "TEXT")
+        await add_column_if_not_exists("info_complete", "INTEGER", 0)
         
         # Create birthday_wishes table
         await db.conn.execute("""
