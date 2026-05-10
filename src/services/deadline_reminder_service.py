@@ -206,9 +206,35 @@ Please start working on this task if you haven't already!"""
             logger.error(f"Error sending 1-hour reminder for task {task.ticket}: {e}")
     
     async def _send_overdue_alert(self, task: Task, hours_overdue: float):
-        """Send overdue alert to assignee and admins."""
+        """Send overdue alert to assignee and admins (once per day, tracked in database)."""
         try:
             from src.utils.message_utils import send_auto_delete_dm
+            from datetime import date
+            
+            # Check if already sent today (using database field)
+            today = date.today()
+            today_str = today.isoformat()
+            
+            # Safety check: if field doesn't exist yet (before migration), initialize it
+            if not hasattr(task, 'last_overdue_alert_date'):
+                task.last_overdue_alert_date = None
+            
+            if task.last_overdue_alert_date == today_str:
+                logger.debug(f"Skipping overdue alert for {task.ticket} - already sent today ({today_str})")
+                return  # Already sent today
+            
+            # Add fire reaction to the task message (bot marks as urgent)
+            try:
+                from telegram import ReactionTypeEmoji
+                await self.bot_context.bot.set_message_reaction(
+                    chat_id=self.config.TELEGRAM_GROUP_ID,
+                    message_id=task.message_id,
+                    reaction=[ReactionTypeEmoji(emoji="🔥")],
+                    is_big=False
+                )
+                logger.info(f"🔥 Added fire reaction to overdue task {task.ticket}")
+            except Exception as e:
+                logger.warning(f"Failed to add fire reaction to task {task.ticket}: {e}")
             
             # Send to assignee
             from src.utils.link_builder import build_message_link
@@ -253,6 +279,7 @@ Please start working on this task if you haven't already!"""
 
 [📎 View Task]({task_link})
 
+🔥 Task marked with fire emoji (urgent)
 Action required: Contact assignee or escalate."""
             
             await self.bot_context.bot.send_message(
@@ -262,6 +289,14 @@ Action required: Contact assignee or escalate."""
                 message_thread_id=self.config.TOPIC_ADMIN_CONTROL_PANEL,
                 disable_web_page_preview=True
             )
+            
+            # Update task in database to mark alert as sent today
+            task.last_overdue_alert_date = today_str
+            try:
+                await self.task_service.task_repo.update_task(task)
+                logger.info(f"✅ Marked overdue alert sent for {task.ticket} on {today_str}")
+            except Exception as e:
+                logger.error(f"Failed to update task {task.ticket} with alert date: {e}")
             
             logger.info(f"📨 Sent overdue alert to Admin Control Panel for task {task.ticket}")
             

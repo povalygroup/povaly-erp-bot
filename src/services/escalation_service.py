@@ -320,6 +320,7 @@ _⏱️ This message will auto-delete in 300 seconds_"""
         """Check for tasks stuck in ASSIGNED or STARTED state."""
         try:
             from src.data.models.task import TaskState
+            from datetime import date
             
             # Get all tasks in ASSIGNED or STARTED state
             assigned_tasks = await self.task_service.task_repo.get_tasks_by_state(TaskState.ASSIGNED)
@@ -331,6 +332,8 @@ _⏱️ This message will auto-delete in 300 seconds_"""
                 return
             
             now = datetime.now()
+            today = date.today()
+            today_str = today.isoformat()
             stuck_tasks = []
             
             for task in all_tasks:
@@ -342,13 +345,22 @@ _⏱️ This message will auto-delete in 300 seconds_"""
                 
                 hours_elapsed = time_elapsed.total_seconds() / 3600
                 
+                # Check if task is stuck AND alert not sent today
                 if hours_elapsed >= self.task_escalation_hours:
-                    stuck_tasks.append((task, hours_elapsed))
+                    # Check if alert already sent today (using last_overdue_alert_date field)
+                    # We reuse this field for stuck task alerts to avoid another migration
+                    if not hasattr(task, 'last_overdue_alert_date'):
+                        task.last_overdue_alert_date = None
+                    
+                    if task.last_overdue_alert_date != today_str:
+                        stuck_tasks.append((task, hours_elapsed))
+                    else:
+                        logger.debug(f"Skipping stuck task alert for {task.ticket} - already sent today ({today_str})")
             
             if not stuck_tasks:
                 return
             
-            logger.info(f"Found {len(stuck_tasks)} stuck tasks for escalation")
+            logger.info(f"Found {len(stuck_tasks)} stuck tasks for escalation (not alerted today)")
             
             for task, hours_elapsed in stuck_tasks:
                 await self._send_task_escalation_alert(task, int(hours_elapsed))
@@ -359,6 +371,8 @@ _⏱️ This message will auto-delete in 300 seconds_"""
     async def _send_task_escalation_alert(self, task, hours_elapsed: int):
         """Send task escalation alert to Admin Control Panel and DM to assignee."""
         try:
+            from datetime import date
+            
             # Get assignee info
             user_repo = self.bot_context.bot_data.get('user_repository')
             assignee_name = f"User {task.assignee_id}"
@@ -434,6 +448,17 @@ _⏱️ This message will auto-delete in 180 seconds_"""
                     "task_escalation",
                     f"Task #{task.ticket} stuck for {hours_elapsed}h"
                 )
+            
+            # Mark alert as sent today in database (reuse last_overdue_alert_date field)
+            today = date.today()
+            today_str = today.isoformat()
+            task.last_overdue_alert_date = today_str
+            
+            try:
+                await self.task_service.task_repo.update_task(task)
+                logger.info(f"✅ Marked stuck task alert sent for {task.ticket} on {today_str}")
+            except Exception as e:
+                logger.error(f"Failed to update task {task.ticket} with alert date: {e}")
             
             logger.info(f"📨 Sent task escalation alert to Admin Control Panel for {task.ticket}")
             

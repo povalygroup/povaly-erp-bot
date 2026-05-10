@@ -29,6 +29,10 @@ class TaskRepository:
         """Update task state."""
         await self.db.update_task_state(ticket, state, timestamp)
     
+    async def update_task(self, task: Task) -> None:
+        """Update a task with all fields."""
+        await self.db.update_task(task)
+    
     async def get_tasks_by_assignee(self, assignee_id: int, state: Optional[TaskState] = None) -> List[Task]:
         """Get tasks assigned to a user."""
         return await self.db.get_tasks_by_assignee(assignee_id, state)

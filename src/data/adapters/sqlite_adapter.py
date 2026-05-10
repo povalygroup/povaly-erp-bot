@@ -519,7 +519,7 @@ class SQLiteAdapter:
         """Insert a new task."""
         try:
             await self.conn.execute("""
-                INSERT INTO tasks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO tasks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 task.ticket, task.brand, task.assignee_id, task.creator_id,
                 task.state.value, task.created_at.isoformat(),
@@ -530,12 +530,58 @@ class SQLiteAdapter:
                 1 if task.has_fire_exemption else 0,
                 task.fire_exemption_by,
                 task.fire_exemption_at.isoformat() if task.fire_exemption_at else None,
-                task.deadline.isoformat() if task.deadline else None
+                task.deadline.isoformat() if task.deadline else None,
+                task.last_overdue_alert_date
             ))
             await self.conn.commit()
             logger.info(f"✅ Task inserted successfully: {task.ticket}")
         except Exception as e:
             logger.error(f"❌ Failed to insert task {task.ticket}: {e}", exc_info=True)
+            raise
+    
+    async def update_task(self, task: Task):
+        """Update an existing task with all fields."""
+        try:
+            await self.conn.execute("""
+                UPDATE tasks SET
+                    brand = ?,
+                    assignee_id = ?,
+                    creator_id = ?,
+                    state = ?,
+                    created_at = ?,
+                    started_at = ?,
+                    qa_submitted_at = ?,
+                    completed_at = ?,
+                    message_id = ?,
+                    topic_id = ?,
+                    has_fire_exemption = ?,
+                    fire_exemption_by = ?,
+                    fire_exemption_at = ?,
+                    deadline = ?,
+                    last_overdue_alert_date = ?
+                WHERE ticket = ?
+            """, (
+                task.brand,
+                task.assignee_id,
+                task.creator_id,
+                task.state.value,
+                task.created_at.isoformat(),
+                task.started_at.isoformat() if task.started_at else None,
+                task.qa_submitted_at.isoformat() if task.qa_submitted_at else None,
+                task.completed_at.isoformat() if task.completed_at else None,
+                task.message_id,
+                task.topic_id,
+                1 if task.has_fire_exemption else 0,
+                task.fire_exemption_by,
+                task.fire_exemption_at.isoformat() if task.fire_exemption_at else None,
+                task.deadline.isoformat() if task.deadline else None,
+                task.last_overdue_alert_date,
+                task.ticket
+            ))
+            await self.conn.commit()
+            logger.debug(f"✅ Task updated successfully: {task.ticket}")
+        except Exception as e:
+            logger.error(f"❌ Failed to update task {task.ticket}: {e}", exc_info=True)
             raise
     
     async def get_task_by_ticket(self, ticket: str) -> Optional[Task]:

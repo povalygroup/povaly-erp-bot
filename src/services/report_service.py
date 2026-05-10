@@ -519,7 +519,7 @@ class ReportService:
             logger.error(f"Error in _send_monthly_report: {e}", exc_info=True)
     
     async def _performance_report_loop(self):
-        """Background loop for sending performance reports."""
+        """Background loop for sending TOP PERFORMERS report with badges."""
         logger.info("Started performance report loop")
         
         while self.running:
@@ -551,81 +551,135 @@ class ReportService:
         logger.info("Performance report loop stopped")
     
     async def _send_performance_report(self):
-        """Send system performance report to TOPIC_OFFICIAL_DIRECTIVES."""
+        """Send TOP PERFORMERS report with badge system to TOPIC_OFFICIAL_DIRECTIVES."""
         try:
             today = date.today()
             week_start = today - timedelta(days=7)
             
-            # Collect system metrics
-            total_tasks = 0
-            completed_tasks = 0
-            pending_qas = 0
-            open_issues = 0
+            # Get all users
+            from src.data.adapters.sqlite_adapter import SQLiteAdapter
+            db_adapter = self.bot_context.bot_data.get('db_adapter')
+            if not isinstance(db_adapter, SQLiteAdapter):
+                return
             
-            if self.task_service:
-                from src.data.models.task import TaskState
-                all_states = [TaskState.ASSIGNED, TaskState.STARTED, TaskState.QA_SUBMITTED, TaskState.APPROVED, TaskState.REJECTED]
-                for state in all_states:
-                    tasks = await self.task_service.task_repo.get_tasks_by_state(state)
-                    total_tasks += len(tasks)
-                    if state == TaskState.APPROVED:
-                        # Count only this week's completions
-                        for task in tasks:
-                            if task.updated_at and task.updated_at.date() >= week_start:
-                                completed_tasks += 1
+            users = await db_adapter.get_all_users()
             
-            if self.qa_service:
-                pending_submissions = await self.qa_service.get_pending_submissions()
-                pending_qas = len(pending_submissions)
+            # Calculate performance score for each employee
+            employee_performance = []
             
-            if self.issue_service:
-                issues = await self.issue_service.get_open_issues()
-                open_issues = len(issues)
+            for user in users:
+                try:
+                    username = f"@{user.username}" if user.username else f"User {user.user_id}"
+                    
+                    # Get tasks completed this week
+                    tasks_completed = 0
+                    tasks_on_time = 0
+                    if self.task_service:
+                        from src.data.models.task import TaskState
+                        all_tasks = await self.task_service.task_repo.get_tasks_by_assignee(user.user_id)
+                        for task in all_tasks:
+                            if task.completed_at and week_start <= task.completed_at.date() <= today and task.state == TaskState.APPROVED:
+                                tasks_completed += 1
+                                # Check if completed on time (before deadline)
+                                if task.deadline and task.completed_at <= task.deadline:
+                                    tasks_on_time += 1
+                    
+                    # Get attendance for the week
+                    from src.data.repositories.attendance_repository import AttendanceRepository
+                    attendance_repo = AttendanceRepository(db_adapter)
+                    
+                    days_present = 0
+                    days_on_time = 0
+                    total_hours = 0.0
+                    
+                    for i in range(7):
+                        check_date = week_start + timedelta(days=i)
+                        attendance = await attendance_repo.get_attendance(user.user_id, check_date)
+                        if attendance:
+                            days_present += 1
+                            if not attendance.is_late:
+                                days_on_time += 1
+                            if attendance.total_hours:
+                                total_hours += attendance.total_hours
+                    
+                    # Calculate performance score
+                    # Formula: (tasks * 10) + (on_time_tasks * 5) + (attendance * 2) + (punctuality * 3) + (hours * 0.5)
+                    score = (
+                        (tasks_completed * 10) +
+                        (tasks_on_time * 5) +
+                        (days_present * 2) +
+                        (days_on_time * 3) +
+                        (total_hours * 0.5)
+                    )
+                    
+                    # Only include employees with activity
+                    if score > 0:
+                        employee_performance.append({
+                            'username': username,
+                            'score': score,
+                            'tasks_completed': tasks_completed,
+                            'tasks_on_time': tasks_on_time,
+                            'days_present': days_present,
+                            'days_on_time': days_on_time,
+                            'total_hours': total_hours
+                        })
+                
+                except Exception as e:
+                    logger.error(f"Error calculating performance for user {user.user_id}: {e}")
             
-            # Calculate performance metrics
-            completion_rate = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
+            # Sort by score (highest first)
+            employee_performance.sort(key=lambda x: x['score'], reverse=True)
             
-            # Build performance report
-            report_msg = f"""📈 **SYSTEM PERFORMANCE REPORT**
+            # Take top 10
+            top_performers = employee_performance[:10]
+            
+            if not top_performers:
+                logger.info("No employee performance data available for this week")
+                return
+            
+            # Build performance report with badges
+            report_msg = f"""🏆 **TOP PERFORMERS OF THE WEEK**
 
-**Period:** {week_start.strftime('%b %d')} - {today.strftime('%b %d, %Y')}
+**Week:** {week_start.strftime('%b %d')} - {today.strftime('%b %d, %Y')}
 **Generated:** {datetime.now().strftime('%A, %I:%M %p')}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-**📊 Task Metrics:**
-• Total Active Tasks: {total_tasks}
-• Completed This Week: {completed_tasks}
-• Completion Rate: {completion_rate:.1f}%
+"""
+            
+            # Assign badges
+            badges = ["🥇", "🥈", "🥉", "⭐", "⭐", "⭐", "⭐", "⭐", "⭐", "⭐"]
+            
+            for idx, emp in enumerate(top_performers):
+                badge = badges[idx] if idx < len(badges) else "⭐"
+                rank = idx + 1
+                
+                # Build achievement highlights
+                highlights = []
+                if emp['tasks_completed'] > 0:
+                    highlights.append(f"{emp['tasks_completed']} tasks completed")
+                if emp['tasks_on_time'] > 0:
+                    highlights.append(f"{emp['tasks_on_time']} on-time")
+                if emp['days_on_time'] == 7:
+                    highlights.append("Perfect punctuality")
+                elif emp['days_on_time'] >= 5:
+                    highlights.append("Excellent punctuality")
+                if emp['total_hours'] >= 50:
+                    highlights.append(f"{emp['total_hours']:.0f}h dedication")
+                
+                highlights_str = " • ".join(highlights) if highlights else "Consistent performance"
+                
+                report_msg += f"""**{badge} #{rank} - {emp['username']}**
+{highlights_str}
 
-**🔍 QA Metrics:**
-• Pending QA Reviews: {pending_qas}
+"""
+            
+            report_msg += f"""━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-**⚠️ Issue Metrics:**
-• Open Issues: {open_issues}
+**🎯 Recognition:**
+These employees demonstrated exceptional performance, dedication, and commitment this week. Their contributions drive our success!
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-**📋 Directives:**
-
-1. **Task Management**
-   • Monitor stuck tasks (>72h)
-   • Ensure timely QA submissions
-   • Address rejected tasks promptly
-
-2. **Quality Assurance**
-   • Review pending QAs within 24h
-   • Provide detailed feedback on rejections
-   • Maintain quality standards
-
-3. **Issue Resolution**
-   • Claim and resolve issues within 2h
-   • Escalate critical issues immediately
-   • Document resolutions properly
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-**Status:** {"🟢 Healthy" if completion_rate > 80 and pending_qas < 5 and open_issues < 10 else "🟡 Needs Attention" if completion_rate > 60 else "🔴 Critical"}"""
+**Keep up the excellent work! 🚀**"""
             
             # Send to TOPIC_OFFICIAL_DIRECTIVES
             await self.bot_context.bot.send_message(
@@ -635,7 +689,7 @@ class ReportService:
                 message_thread_id=self.config.TOPIC_OFFICIAL_DIRECTIVES
             )
             
-            logger.info(f"✅ Sent performance report to TOPIC_OFFICIAL_DIRECTIVES")
+            logger.info(f"✅ Sent TOP PERFORMERS report to TOPIC_OFFICIAL_DIRECTIVES")
             
         except Exception as e:
             logger.error(f"Error in _send_performance_report: {e}", exc_info=True)

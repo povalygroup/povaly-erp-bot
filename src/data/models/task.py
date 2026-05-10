@@ -43,6 +43,9 @@ class Task:
     fire_exemption_by: Optional[int] = None
     fire_exemption_at: Optional[datetime] = None
     
+    # Alert tracking (to prevent duplicate alerts)
+    last_overdue_alert_date: Optional[str] = None  # Store as YYYY-MM-DD string
+    
     def to_dict(self) -> dict:
         """Convert task to dictionary."""
         return {
@@ -61,6 +64,7 @@ class Task:
             "has_fire_exemption": self.has_fire_exemption,
             "fire_exemption_by": self.fire_exemption_by,
             "fire_exemption_at": self.fire_exemption_at.isoformat() if self.fire_exemption_at else None,
+            "last_overdue_alert_date": self.last_overdue_alert_date,
         }
     
     @classmethod
@@ -82,6 +86,7 @@ class Task:
             has_fire_exemption=data.get("has_fire_exemption", False),
             fire_exemption_by=data.get("fire_exemption_by"),
             fire_exemption_at=datetime.fromisoformat(data["fire_exemption_at"]) if data.get("fire_exemption_at") else None,
+            last_overdue_alert_date=data.get("last_overdue_alert_date"),
         )
 
 
