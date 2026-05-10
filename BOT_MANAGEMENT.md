@@ -16,6 +16,26 @@ Complete guide for managing the Telegram bot locally and on Hostinger server.
 
 ---
 
+## ➡️ On VPS Commands
+
+# Check bot status
+sudo systemctl status telegram-bot
+
+# Stop the bot
+sudo systemctl stop telegram-bot
+
+# Start the bot
+sudo systemctl start telegram-bot
+
+# Restart the bot
+sudo systemctl restart telegram-bot
+
+# View logs
+tail -f ~/povaly-bot/data/logs/telegram_bot.log
+
+# View error logs
+tail -f ~/povaly-bot/data/logs/errors.log
+
 ## 💻 Local Development
 
 ### Prerequisites
