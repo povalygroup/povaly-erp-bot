@@ -519,9 +519,10 @@ class SQLiteAdapter:
         """Insert a new task."""
         try:
             from src.utils.time_utils import now_in_timezone
-            from src.config import config
+            from src.config import get_config
             
-            current_time = now_in_timezone(config.TIMEZONE)
+            cfg = get_config()
+            current_time = now_in_timezone(cfg.TIMEZONE)
             
             await self.conn.execute("""
                 INSERT INTO tasks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -556,9 +557,10 @@ class SQLiteAdapter:
         """Update an existing task with all fields."""
         try:
             from src.utils.time_utils import now_in_timezone
-            from src.config import config
+            from src.config import get_config
             
-            current_time = now_in_timezone(config.TIMEZONE)
+            cfg = get_config()
+            current_time = now_in_timezone(cfg.TIMEZONE)
             
             await self.conn.execute("""
                 UPDATE tasks SET
@@ -639,8 +641,9 @@ class SQLiteAdapter:
         """Update task state."""
         if timestamp is None:
             from src.utils.time_utils import now_in_timezone
-            from src.config import config
-            timestamp = now_in_timezone(config.TIMEZONE)
+            from src.config import get_config
+            cfg = get_config()
+            timestamp = now_in_timezone(cfg.TIMEZONE)
         
         # Update appropriate timestamp field based on state
         if state == TaskState.STARTED:
