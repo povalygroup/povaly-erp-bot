@@ -11,6 +11,7 @@ from src.config import Config
 from src.core.parser.message_parser import MessageParser
 from src.core.parser.meeting_parser import MeetingParser
 from src.data.models.task import TaskState
+from src.utils.time_utils import now_in_timezone
 
 logger = logging.getLogger(__name__)
 parser = MessageParser()
@@ -314,12 +315,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                getattr(message.from_user, 'first_name', None) or \
                                username
                     existing_user.full_name = full_name
-                    existing_user.last_active = datetime.now()
+                    existing_user.last_active = now_in_timezone(config.TIMEZONE)
                     await user_repo.update_user(existing_user)
                     logger.info(f"✅ Updated user info: {user_id} -> @{username}")
                 else:
                     # Just update last active
-                    await user_repo.update_last_active(user_id, datetime.now())
+                    await user_repo.update_last_active(user_id, now_in_timezone(config.TIMEZONE))
             else:
                 # Create new user with actual Telegram info
                 from src.data.models import User, UserRole
@@ -335,8 +336,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     last_name=last_name,
                     full_name=full_name,
                     role=UserRole.REGULAR,
-                    created_at=datetime.now(),
-                    last_active=datetime.now()
+                    created_at=now_in_timezone(config.TIMEZONE),
+                    last_active=now_in_timezone(config.TIMEZONE)
                 )
                 await user_repo.create_user(new_user)
                 logger.info(f"✅ Created user record: {user_id} -> @{username} ({first_name})")
@@ -945,7 +946,7 @@ async def handle_task_allocation(update, text, user_id, username, message_id, ta
                         await db_adapter.conn.execute("""
                             INSERT INTO task_assignees (ticket, assignee_id, status, assigned_at, is_primary)
                             VALUES (?, ?, ?, ?, ?)
-                        """, (task_data.ticket, assignee_id, 'ASSIGNED', datetime.now().isoformat(), 1 if is_primary else 0))
+                        """, (task_data.ticket, assignee_id, 'ASSIGNED', now_in_timezone(config.TIMEZONE).isoformat(), 1 if is_primary else 0))
                     await db_adapter.conn.commit()
                     logger.info(f"✅ Added {len(assignee_ids)} assignees to task {task_data.ticket}")
                 except Exception as e:
@@ -1075,7 +1076,7 @@ async def _track_task_creation(context, user_id, task_data, message_id, text):
                 assignee_id=user_id,
                 brand=task_data.brand,
                 message_id=message_id,
-                message_date=datetime.now(),
+                message_date=now_in_timezone(config.TIMEZONE),
                 message_text=text,
                 topic_id=0  # Will be set by topic scanner
             )
@@ -1618,7 +1619,7 @@ async def _is_user_on_leave(user_id: int, attendance_repo) -> bool:
         leave_requests = await attendance_repo.get_leave_requests_by_user(user_id)
         
         # Check if any approved leave is active today
-        today = datetime.now().date()
+        today = now_in_timezone(config.TIMEZONE).date()
         for leave in leave_requests:
             if leave.status == LeaveStatus.APPROVED:
                 if leave.start_date <= today <= leave.end_date:

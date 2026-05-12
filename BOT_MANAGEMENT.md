@@ -17,6 +17,12 @@ Complete guide for managing the Telegram bot locally and on Hostinger server.
 ---
 
 ## ➡️ On VPS Commands
+# Go to terminal and enter
+ssh root@ip
+pass: ssh password
+
+# Navigate to folder
+cd ~/povaly-bot
 
 # Check bot status
 sudo systemctl status telegram-bot
