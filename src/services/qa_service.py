@@ -7,6 +7,7 @@ from typing import Optional
 from src.data.models import QASubmission, QAStatus, TaskState
 from src.data.repositories import TaskRepository, QARepository
 from src.core.state.state_engine import StateEngine
+from src.utils.time_utils import now_in_timezone
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +78,7 @@ class QAService:
             brand=brand_code,
             asset=asset,
             submitter_id=submitter_id,
-            submitted_at=datetime.now(),
+            submitted_at=now_in_timezone(self.state_engine.config.TIMEZONE),
             message_id=message_id,
             status=QAStatus.PENDING
         )
@@ -119,7 +120,7 @@ class QAService:
             ticket,
             QAStatus.IN_REVIEW,
             reviewer_id,
-            datetime.now()
+            now_in_timezone(self.state_engine.config.TIMEZONE)
         )
         logger.info(f"QA for task {ticket} claimed for review by user {reviewer_id}")
         return True
@@ -149,7 +150,7 @@ class QAService:
         logger.info(f"Approving QA for {ticket} (current status: {submission.status})")
         
         # Update submission status
-        reviewed_at = datetime.now()
+        reviewed_at = now_in_timezone(self.state_engine.config.TIMEZONE)
         await self.qa_repo.update_submission_status(
             ticket,
             QAStatus.APPROVED,
@@ -185,7 +186,7 @@ class QAService:
         logger.info(f"Rejecting QA for {ticket} (current status: {submission.status})")
         
         # Update submission status
-        reviewed_at = datetime.now()
+        reviewed_at = now_in_timezone(self.state_engine.config.TIMEZONE)
         await self.qa_repo.update_submission_status(
             ticket,
             QAStatus.REJECTED,

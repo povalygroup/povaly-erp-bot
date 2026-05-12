@@ -9,6 +9,7 @@ from src.data.models import Task, TaskState, TaskReaction, User, UserRole
 from src.data.repositories import TaskRepository, UserRepository
 from src.core.state.state_engine import StateEngine
 from src.config import Config
+from src.utils.time_utils import now_in_timezone
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +101,7 @@ class TaskService:
             assignee_id=assignee_id,
             creator_id=creator_id,
             state=TaskState.ASSIGNED,
-            created_at=datetime.now(),
+            created_at=now_in_timezone(self.config.TIMEZONE),
             message_id=message_id,
             topic_id=topic_id,
             deadline=deadline
@@ -209,7 +210,7 @@ _⏱️ This message will auto-delete in 120 seconds_"""
         Returns:
             True if reaction was processed successfully
         """
-        timestamp = datetime.now()
+        timestamp = now_in_timezone(self.config.TIMEZONE)
         
         # Record reaction
         task_reaction = TaskReaction(
@@ -270,8 +271,8 @@ _⏱️ This message will auto-delete in 120 seconds_"""
                 username=f"user_{user_id}",
                 full_name=f"User {user_id}",
                 role=UserRole.REGULAR,
-                created_at=datetime.now(),
-                last_active=datetime.now()
+                created_at=now_in_timezone(self.config.TIMEZONE),
+                last_active=now_in_timezone(self.config.TIMEZONE)
             )
             await self.user_repo.create_user(user)
             logger.info(f"Created user record for {user_id}")

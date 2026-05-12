@@ -5,6 +5,8 @@ import logging
 from datetime import datetime, date, time, timedelta
 from typing import List
 
+from src.utils.time_utils import now_in_timezone
+
 logger = logging.getLogger(__name__)
 
 
@@ -86,7 +88,7 @@ class DailySummaryService:
         
         while self.running:
             try:
-                now = datetime.now()
+                now = now_in_timezone(self.config.TIMEZONE)
                 current_time = now.time()
                 
                 # Check if it's 9:00 AM (within 1 minute window)
@@ -117,7 +119,7 @@ class DailySummaryService:
                     assigned_tasks = await self.task_service.task_repo.get_tasks_by_state(TaskState.ASSIGNED)
                     started_tasks = await self.task_service.task_repo.get_tasks_by_state(TaskState.STARTED)
                     
-                    now = datetime.now()
+                    now = now_in_timezone(self.config.TIMEZONE)
                     task_escalation_hours = self.config.TASK_ESCALATION_HOURS
                     
                     for task in assigned_tasks + started_tasks:
@@ -161,7 +163,7 @@ class DailySummaryService:
             digest_msg = f"""🚨 **Critical Escalation Digest**
 
 **Date:** {date.today().strftime('%Y-%m-%d')}
-**Time:** {datetime.now().strftime('%I:%M %p')}
+**Time:** {now_in_timezone(self.config.TIMEZONE).strftime('%I:%M %p')}
 
 **Pending Items:**
 • Stuck Tasks: {stuck_tasks_count}
@@ -204,7 +206,7 @@ class DailySummaryService:
         
         while self.running:
             try:
-                now = datetime.now()
+                now = now_in_timezone(self.config.TIMEZONE)
                 current_time = now.time()
                 
                 # Check if it's Monday 9:00 AM (within 1 minute window)
@@ -311,7 +313,7 @@ class DailySummaryService:
         
         while self.running:
             try:
-                now = datetime.now()
+                now = now_in_timezone(self.config.TIMEZONE)
                 current_time = now.time()
                 
                 # Check if it's the configured time (default midnight)
@@ -523,7 +525,7 @@ All QA submissions are reviewed! 🎉
 
 """
                 for qa in pending_qas[:10]:  # Show first 10
-                    time_pending = datetime.now() - qa.submitted_at
+                    time_pending = now_in_timezone(self.config.TIMEZONE) - qa.submitted_at
                     hours_pending = int(time_pending.total_seconds() / 3600)
                     summary_msg += f"• #{qa.ticket} - {qa.brand}\n"
                     summary_msg += f"  Asset: {qa.asset} | Pending: {hours_pending}h\n"
@@ -599,7 +601,7 @@ All alerts have been handled! 🎉
                     
                     for alert in alerts[:5]:  # Show first 5 of each type
                         ack_status = "👍 Ack" if alert.acknowledged else "⚪ New"
-                        age_hours = int((datetime.now() - alert.created_at).total_seconds() / 3600)
+                        age_hours = int((now_in_timezone(self.config.TIMEZONE) - alert.created_at).total_seconds() / 3600)
                         summary_msg += f"• {ack_status} | {age_hours}h ago\n"
                     
                     if len(alerts) > 5:

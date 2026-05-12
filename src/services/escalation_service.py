@@ -7,6 +7,7 @@ from typing import List
 
 from src.services.issue_service import IssueService
 from src.data.models.issue import Issue
+from src.utils.time_utils import now_in_timezone
 
 logger = logging.getLogger(__name__)
 
@@ -144,7 +145,7 @@ class EscalationService:
         """Send escalation message to Admin Control Panel."""
         try:
             # Calculate time elapsed
-            time_elapsed = datetime.now() - issue.created_at
+            time_elapsed = now_in_timezone(self.config.TIMEZONE) - issue.created_at
             hours_elapsed = int(time_elapsed.total_seconds() / 3600)
             
             # Get creator username
@@ -238,7 +239,7 @@ class EscalationService:
         """Send reminder to users who claimed an issue."""
         try:
             # Calculate time elapsed since claim
-            time_elapsed = datetime.now() - issue.claimed_at
+            time_elapsed = now_in_timezone(self.config.TIMEZONE) - issue.claimed_at
             hours_elapsed = int(time_elapsed.total_seconds() / 3600)
             
             # Send reminder to each user who claimed the issue
@@ -331,7 +332,7 @@ _⏱️ This message will auto-delete in 300 seconds_"""
             if not all_tasks:
                 return
             
-            now = datetime.now()
+            now = now_in_timezone(self.config.TIMEZONE)
             today = date.today()
             today_str = today.isoformat()
             stuck_tasks = []

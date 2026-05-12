@@ -6,6 +6,7 @@ from datetime import datetime, date, time, timedelta
 from typing import List
 
 from src.data.repositories.attendance_repository import AttendanceRepository
+from src.utils.time_utils import now_in_timezone
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +110,7 @@ class AttendanceService:
         
         while self.running:
             try:
-                now = datetime.now()
+                now = now_in_timezone(self.config.TIMEZONE)
                 current_time = now.time()
                 
                 # Check if it's 6:00 PM (within 1 minute window)
@@ -132,7 +133,7 @@ class AttendanceService:
         
         while self.running:
             try:
-                now = datetime.now()
+                now = now_in_timezone(self.config.TIMEZONE)
                 current_time = now.time()
                 
                 # Check if it's 10:15 AM (within 1 minute window)
@@ -186,7 +187,7 @@ class AttendanceService:
                     
                     if attendance and not attendance.checkout_time:
                         # Auto check-out
-                        checkout_time = datetime.now()
+                        checkout_time = now_in_timezone(self.config.TIMEZONE)
                         await self.attendance_repo.update_checkout(
                             user.user_id, 
                             today, 
@@ -297,7 +298,7 @@ _⏱️ This message will auto-delete in 120 seconds_""",
 
 You haven't checked in today yet.
 
-**Time:** {datetime.now().strftime('%I:%M %p')}
+**Time:** {now_in_timezone(self.config.TIMEZONE).strftime('%I:%M %p')}
 **Expected:** Before 10:00 AM
 
 Please use `/checkin` or start your first task to mark attendance.
@@ -352,7 +353,7 @@ _⏱️ This message will auto-delete in 180 seconds_""",
         
         while self.running:
             try:
-                now = datetime.now()
+                now = now_in_timezone(self.config.TIMEZONE)
                 current_time = now.time()
                 
                 # Check if it's the configured alert time (within 1 minute window)
@@ -414,7 +415,7 @@ _⏱️ This message will auto-delete in 180 seconds_""",
     async def _send_missing_checkin_alert(self, missing_users):
         """Send consolidated missing check-in alert to Admin Control Panel."""
         try:
-            current_time = datetime.now().strftime('%I:%M %p')
+            current_time = now_in_timezone(self.config.TIMEZONE).strftime('%I:%M %p')
             
             # Build compact alert message
             alert_msg = f"""📭 **Missing Check-ins**
@@ -463,7 +464,7 @@ _⏱️ This message will auto-delete in 180 seconds_""",
         
         while self.running:
             try:
-                now = datetime.now()
+                now = now_in_timezone(self.config.TIMEZONE)
                 current_time = now.time()
                 
                 # Check if it's 9:00 AM (within 1 minute window)
@@ -573,7 +574,7 @@ _⏱️ This message will auto-delete in 180 seconds_""",
         
         while self.running:
             try:
-                now = datetime.now()
+                now = now_in_timezone(self.config.TIMEZONE)
                 current_time = now.time()
                 
                 # Check if it's 5:00 PM (within 1 minute window)
@@ -637,7 +638,7 @@ _⏱️ This message will auto-delete in 180 seconds_""",
             summary_msg = f"""📊 **Daily Attendance Summary**
 
 **Date:** {today.strftime('%Y-%m-%d')}
-**Time:** {datetime.now().strftime('%I:%M %p')}
+**Time:** {now_in_timezone(self.config.TIMEZONE).strftime('%I:%M %p')}
 
 **Overview:**
 • Total Employees: {total_users}

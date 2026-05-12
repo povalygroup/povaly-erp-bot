@@ -6,6 +6,8 @@ from datetime import datetime, date, time, timedelta
 from typing import Dict, List, Optional
 from collections import defaultdict
 
+from src.utils.time_utils import now_in_timezone
+
 logger = logging.getLogger(__name__)
 
 
@@ -105,7 +107,7 @@ class ReportService:
         
         while self.running:
             try:
-                now = datetime.now()
+                now = now_in_timezone(self.config.TIMEZONE)
                 current_time = now.time()
                 
                 # Check if it's the configured daily report time
@@ -128,7 +130,7 @@ class ReportService:
         
         while self.running:
             try:
-                now = datetime.now()
+                now = now_in_timezone(self.config.TIMEZONE)
                 current_time = now.time()
                 
                 # Map day names to weekday numbers (0=Monday, 6=Sunday)
@@ -160,7 +162,7 @@ class ReportService:
         
         while self.running:
             try:
-                now = datetime.now()
+                now = now_in_timezone(self.config.TIMEZONE)
                 current_time = now.time()
                 
                 # Check if it's the 1st of the month at the configured time
@@ -259,7 +261,7 @@ class ReportService:
             report_msg = f"""📊 **DAILY EMPLOYEE REPORT**
 
 **Date:** {today.strftime('%A, %B %d, %Y')}
-**Generated:** {datetime.now().strftime('%I:%M %p')}
+**Generated:** {now_in_timezone(self.config.TIMEZONE).strftime('%I:%M %p')}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -368,7 +370,7 @@ class ReportService:
             report_msg = f"""📊 **WEEKLY EMPLOYEE REPORT**
 
 **Week:** {week_start.strftime('%b %d')} - {today.strftime('%b %d, %Y')}
-**Generated:** {datetime.now().strftime('%I:%M %p')}
+**Generated:** {now_in_timezone(self.config.TIMEZONE).strftime('%I:%M %p')}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -480,7 +482,7 @@ class ReportService:
             report_msg = f"""📊 **MONTHLY EMPLOYEE REPORT**
 
 **Month:** {month_name}
-**Generated:** {datetime.now().strftime('%I:%M %p')}
+**Generated:** {now_in_timezone(self.config.TIMEZONE).strftime('%I:%M %p')}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -524,7 +526,7 @@ class ReportService:
         
         while self.running:
             try:
-                now = datetime.now()
+                now = now_in_timezone(self.config.TIMEZONE)
                 current_time = now.time()
                 
                 # Map day names to weekday numbers
@@ -641,7 +643,7 @@ class ReportService:
             report_msg = f"""🏆 **TOP PERFORMERS OF THE WEEK**
 
 **Week:** {week_start.strftime('%b %d')} - {today.strftime('%b %d, %Y')}
-**Generated:** {datetime.now().strftime('%A, %I:%M %p')}
+**Generated:** {now_in_timezone(self.config.TIMEZONE).strftime('%A, %I:%M %p')}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
