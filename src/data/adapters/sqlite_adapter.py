@@ -518,20 +518,33 @@ class SQLiteAdapter:
     async def insert_task(self, task: Task):
         """Insert a new task."""
         try:
+            from src.utils.time_utils import now_in_timezone
+            from src.config import config
+            
+            current_time = now_in_timezone(config.TIMEZONE)
+            
             await self.conn.execute("""
-                INSERT INTO tasks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO tasks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                task.ticket, task.brand, task.assignee_id, task.creator_id,
-                task.state.value, task.created_at.isoformat(),
-                task.started_at.isoformat() if task.started_at else None,
-                task.qa_submitted_at.isoformat() if task.qa_submitted_at else None,
-                task.completed_at.isoformat() if task.completed_at else None,
-                task.message_id, task.topic_id,
-                1 if task.has_fire_exemption else 0,
-                task.fire_exemption_by,
-                task.fire_exemption_at.isoformat() if task.fire_exemption_at else None,
-                task.deadline.isoformat() if task.deadline else None,
-                task.last_overdue_alert_date
+                task.ticket,                                                    # ticket
+                task.brand,                                                     # brand
+                None,                                                           # task_title (not in Task model)
+                task.creator_id,                                                # creator_id
+                task.created_at.isoformat(),                                    # created_at
+                task.started_at.isoformat() if task.started_at else None,       # started_at
+                task.qa_submitted_at.isoformat() if task.qa_submitted_at else None,  # submitted_to_qa_at
+                task.completed_at.isoformat() if task.completed_at else None,   # completed_at
+                None,                                                           # trashed_at (not in Task model)
+                task.message_id,                                                # message_id
+                task.topic_id,                                                  # topic_id
+                task.state.value,                                               # state
+                1 if task.has_fire_exemption else 0,                            # has_fire_exemption
+                task.fire_exemption_by,                                         # fire_exemption_by
+                task.fire_exemption_at.isoformat() if task.fire_exemption_at else None,  # fire_exemption_at
+                task.deadline.isoformat() if task.deadline else None,           # deadline
+                None,                                                           # resources (not in Task model)
+                current_time.isoformat(),                                       # last_updated_at
+                task.creator_id                                                 # last_updated_by
             ))
             await self.conn.commit()
             logger.info(f"✅ Task inserted successfully: {task.ticket}")
@@ -542,40 +555,51 @@ class SQLiteAdapter:
     async def update_task(self, task: Task):
         """Update an existing task with all fields."""
         try:
+            from src.utils.time_utils import now_in_timezone
+            from src.config import config
+            
+            current_time = now_in_timezone(config.TIMEZONE)
+            
             await self.conn.execute("""
                 UPDATE tasks SET
                     brand = ?,
-                    assignee_id = ?,
+                    task_title = ?,
                     creator_id = ?,
-                    state = ?,
                     created_at = ?,
                     started_at = ?,
-                    qa_submitted_at = ?,
+                    submitted_to_qa_at = ?,
                     completed_at = ?,
+                    trashed_at = ?,
                     message_id = ?,
                     topic_id = ?,
+                    state = ?,
                     has_fire_exemption = ?,
                     fire_exemption_by = ?,
                     fire_exemption_at = ?,
                     deadline = ?,
-                    last_overdue_alert_date = ?
+                    resources = ?,
+                    last_updated_at = ?,
+                    last_updated_by = ?
                 WHERE ticket = ?
             """, (
                 task.brand,
-                task.assignee_id,
+                None,  # task_title (not in Task model)
                 task.creator_id,
-                task.state.value,
                 task.created_at.isoformat(),
                 task.started_at.isoformat() if task.started_at else None,
                 task.qa_submitted_at.isoformat() if task.qa_submitted_at else None,
                 task.completed_at.isoformat() if task.completed_at else None,
+                None,  # trashed_at (not in Task model)
                 task.message_id,
                 task.topic_id,
+                task.state.value,
                 1 if task.has_fire_exemption else 0,
                 task.fire_exemption_by,
                 task.fire_exemption_at.isoformat() if task.fire_exemption_at else None,
                 task.deadline.isoformat() if task.deadline else None,
-                task.last_overdue_alert_date,
+                None,  # resources (not in Task model)
+                current_time.isoformat(),
+                task.creator_id,  # last_updated_by
                 task.ticket
             ))
             await self.conn.commit()
@@ -614,7 +638,9 @@ class SQLiteAdapter:
     async def update_task_state(self, ticket: str, state: TaskState, timestamp: Optional[datetime] = None):
         """Update task state."""
         if timestamp is None:
-            timestamp = datetime.now()
+            from src.utils.time_utils import now_in_timezone
+            from src.config import config
+            timestamp = now_in_timezone(config.TIMEZONE)
         
         # Update appropriate timestamp field based on state
         if state == TaskState.STARTED:
@@ -624,7 +650,7 @@ class SQLiteAdapter:
             )
         elif state == TaskState.QA_SUBMITTED:
             await self.conn.execute(
-                "UPDATE tasks SET state = ?, qa_submitted_at = ? WHERE ticket = ?",
+                "UPDATE tasks SET state = ?, submitted_to_qa_at = ? WHERE ticket = ?",
                 (state.value, timestamp.isoformat(), ticket)
             )
         elif state in (TaskState.APPROVED, TaskState.COMPLETED, TaskState.ARCHIVED):
