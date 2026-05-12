@@ -519,7 +519,7 @@ class SQLiteAdapter:
         """Insert a new task."""
         try:
             await self.conn.execute("""
-                INSERT INTO tasks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO tasks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 task.ticket,
                 task.brand,
@@ -535,8 +535,7 @@ class SQLiteAdapter:
                 1 if task.has_fire_exemption else 0,
                 task.fire_exemption_by,
                 task.fire_exemption_at.isoformat() if task.fire_exemption_at else None,
-                task.deadline.isoformat() if task.deadline else None,
-                task.last_overdue_alert_date
+                task.deadline.isoformat() if task.deadline else None
             ))
             await self.conn.commit()
             logger.info(f"✅ Task inserted successfully: {task.ticket}")
@@ -562,8 +561,7 @@ class SQLiteAdapter:
                     has_fire_exemption = ?,
                     fire_exemption_by = ?,
                     fire_exemption_at = ?,
-                    deadline = ?,
-                    last_overdue_alert_date = ?
+                    deadline = ?
                 WHERE ticket = ?
             """, (
                 task.brand,
@@ -580,7 +578,6 @@ class SQLiteAdapter:
                 task.fire_exemption_by,
                 task.fire_exemption_at.isoformat() if task.fire_exemption_at else None,
                 task.deadline.isoformat() if task.deadline else None,
-                task.last_overdue_alert_date,
                 task.ticket
             ))
             await self.conn.commit()
