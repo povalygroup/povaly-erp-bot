@@ -1702,6 +1702,13 @@ _⏱️ This message will auto-delete in 60 seconds_"""
         # Parse datetime
         meeting_datetime = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
         
+        # Make it timezone-aware with configured timezone
+        from src.config import get_config
+        from src.utils.time_utils import get_timezone
+        config = get_config()
+        tz = get_timezone(config.TIMEZONE)
+        meeting_datetime = tz.localize(meeting_datetime)
+        
         # Parse duration
         duration_minutes = meeting_parser.parse_duration_to_minutes(meeting_data.duration)
         

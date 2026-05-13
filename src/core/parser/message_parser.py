@@ -8,7 +8,7 @@ from datetime import datetime
 
 def parse_deadline_string(deadline_str: str) -> Optional[datetime]:
     """
-    Parse deadline string to datetime object.
+    Parse deadline string to datetime object with timezone awareness.
     Format: DD MMM YYYY | HH:MM AM/PM GMT+6
     Examples:
         - "28 Apr 2026 | 6:00 PM GMT+6"
@@ -16,12 +16,15 @@ def parse_deadline_string(deadline_str: str) -> Optional[datetime]:
         - "15 Dec 2025 | 2:45 PM GMT+6"
     
     Returns:
-        datetime object or None if parsing fails
+        timezone-aware datetime object or None if parsing fails
     """
     if not deadline_str:
         return None
     
     try:
+        from src.config import get_config
+        from src.utils.time_utils import get_timezone
+        
         # Remove GMT+6 suffix and extra spaces
         deadline_str = deadline_str.replace('GMT+6', '').strip()
         
@@ -29,12 +32,26 @@ def parse_deadline_string(deadline_str: str) -> Optional[datetime]:
         # Format: "28 Apr 2026 | 6:00 PM" or "28 Apr 2026 | 06:00 PM"
         dt = datetime.strptime(deadline_str, "%d %b %Y | %I:%M %p")
         
+        # Make it timezone-aware with configured timezone
+        config = get_config()
+        tz = get_timezone(config.TIMEZONE)
+        dt = tz.localize(dt)
+        
         return dt
     except ValueError:
         try:
+            from src.config import get_config
+            from src.utils.time_utils import get_timezone
+            
             # Try alternative format without pipe
             deadline_str = deadline_str.replace('|', '').strip()
             dt = datetime.strptime(deadline_str, "%d %b %Y %I:%M %p")
+            
+            # Make it timezone-aware with configured timezone
+            config = get_config()
+            tz = get_timezone(config.TIMEZONE)
+            dt = tz.localize(dt)
+            
             return dt
         except ValueError:
             return None
