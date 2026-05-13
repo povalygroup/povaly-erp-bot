@@ -4,6 +4,7 @@ import logging
 from datetime import datetime, date
 from typing import Dict
 from collections import defaultdict
+from src.utils.time_utils import now_in_timezone
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +62,7 @@ class SecurityAlertService:
 **Latest Attempt:**
 • Command: `{command}`
 • Reason: {reason}
-• Time: {datetime.now().strftime('%I:%M %p')}
+• Time: {now_in_timezone(self.config.TIMEZONE).strftime('%I:%M %p')}
 
 _Multiple unauthorized access attempts detected._"""
             
@@ -115,7 +116,7 @@ _Multiple unauthorized access attempts detected._"""
             alert_msg = f"""⚠️ **System Operation Failed**
 
 **Operation:** {operation}
-**Time:** {datetime.now().strftime('%I:%M %p')}
+**Time:** {now_in_timezone(self.config.TIMEZONE).strftime('%I:%M %p')}
 
 **Details:**
 {details}"""

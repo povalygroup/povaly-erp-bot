@@ -7,6 +7,7 @@ from typing import List, Optional
 
 from src.data.models.task import Task, TaskState
 from src.services.task_service import TaskService
+from src.utils.time_utils import now_in_timezone
 
 logger = logging.getLogger(__name__)
 
@@ -123,7 +124,7 @@ class ArchiveService:
             for task in completed_tasks:
                 # Check if enough time has passed since completion
                 if task.qa_submitted_at:
-                    time_since_completion = datetime.now() - task.qa_submitted_at
+                    time_since_completion = now_in_timezone(self.config.TIMEZONE) - task.qa_submitted_at
                     hours_since_completion = time_since_completion.total_seconds() / 3600
                     
                     if hours_since_completion >= self.archive_delay_hours:
@@ -146,7 +147,7 @@ class ArchiveService:
             if not approved_tasks:
                 return
             
-            now = datetime.now()
+            now = now_in_timezone(self.config.TIMEZONE)
             tasks_needing_reminder = []
             
             for task in approved_tasks:
@@ -217,7 +218,7 @@ class ArchiveService:
 
 **Ticket:** #{task.ticket}
 **Assignee:** {task.assignee_id}
-**Completed:** {datetime.now().strftime('%Y-%m-%d %H:%M')}
+**Completed:** {now_in_timezone(self.config.TIMEZONE).strftime('%Y-%m-%d %H:%M')}
 **Status:** QA Approved & Confirmed Complete
 
 ---"""
@@ -246,7 +247,7 @@ class ArchiveService:
             await self.task_service.task_repo.update_task_state(
                 task.ticket,
                 TaskState.ARCHIVED,
-                datetime.now()
+                now_in_timezone(self.config.TIMEZONE)
             )
             
             logger.info(f"✅ Task {task.ticket} archived successfully")
@@ -267,7 +268,7 @@ class ArchiveService:
 Congratulations! Your task **#{task.ticket}** has been archived.
 
 **Status:** Completed & Approved
-**Archived:** {datetime.now().strftime('%Y-%m-%d %H:%M')}
+**Archived:** {now_in_timezone(self.config.TIMEZONE).strftime('%Y-%m-%d %H:%M')}
 
 Great work on completing this task!
 
@@ -312,7 +313,7 @@ _⏱️ This message will auto-delete in 120 seconds_""",
             # Build task list
             task_list = []
             for task in tasks:
-                time_since_approval = datetime.now() - task.qa_submitted_at
+                time_since_approval = now_in_timezone(self.config.TIMEZONE) - task.qa_submitted_at
                 hours_since_approval = int(time_since_approval.total_seconds() / 3600)
                 
                 # Build link to task message

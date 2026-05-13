@@ -7,6 +7,7 @@ from typing import List
 
 from src.services.qa_service import QAService
 from src.data.models.qa_submission import QASubmission, QAStatus
+from src.utils.time_utils import now_in_timezone
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +111,7 @@ class QAEscalationService:
             if not pending_submissions:
                 return
             
-            now = datetime.now()
+            now = now_in_timezone(self.config.TIMEZONE)
             overdue_submissions = []
             
             for qa in pending_submissions:
@@ -151,7 +152,7 @@ class QAEscalationService:
             from telegram import ReactionTypeEmoji
             
             # Calculate time elapsed
-            time_elapsed = datetime.now() - qa.submitted_at
+            time_elapsed = now_in_timezone(self.config.TIMEZONE) - qa.submitted_at
             hours_elapsed = int(time_elapsed.total_seconds() / 3600)
             
             # Add fire reaction to the QA message
@@ -235,7 +236,7 @@ class QAEscalationService:
             if not pending_submissions:
                 return
             
-            now = datetime.now()
+            now = now_in_timezone(self.config.TIMEZONE)
             reminder_submissions = []
             
             for qa in pending_submissions:
@@ -286,7 +287,7 @@ class QAEscalationService:
         """Send reminder to reviewers who claimed the QA."""
         try:
             # Calculate time elapsed
-            time_elapsed = datetime.now() - qa.submitted_at
+            time_elapsed = now_in_timezone(self.config.TIMEZONE) - qa.submitted_at
             hours_elapsed = int(time_elapsed.total_seconds() / 3600)
             
             # Build link to QA message

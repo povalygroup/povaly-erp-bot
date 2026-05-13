@@ -7,9 +7,10 @@ from datetime import datetime, date, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQueryHandler
 
-from src.config import Config
+from src.config import get_config
 from src.core.brand_mapper import BrandMapper
 from src.data.models.task import TaskState
+from src.utils.time_utils import now_in_timezone
 from src.bot.templates import (
     TASK_ALLOCATION_TEMPLATE,
     CORE_OPERATIONS_TEMPLATE,
@@ -1907,17 +1908,16 @@ _Reviewers: React 👍 to claim, ❤️ to approve, or 👎 to reject._"""
             except Exception as e:
                 logger.warning(f"Failed to forward file: {e}")
         
-        # Create QA submission in database
-        from datetime import datetime
-        from src.data.models.qa_submission import QASubmission, QAStatus
+        # Create QA submission in database        from src.data.models.qa_submission import QASubmission, QAStatus
         
+        config = get_config()
         submission = QASubmission(
             id=None,
             ticket=ticket,
             brand=task.brand.replace('#', ''),
             asset=asset,
             submitter_id=user_id,
-            submitted_at=datetime.now(),
+            submitted_at=now_in_timezone(config.TIMEZONE),
             message_id=qa_msg.message_id,
             status=QAStatus.PENDING
         )
@@ -2093,16 +2093,16 @@ _Reviewers: React 👍 to claim, ❤️ to approve, or 👎 to reject._"""
         logger.info(f"Sent QA submission to QA & Review topic for ticket {ticket}")
         
         # Create QA submission in database
-        from datetime import datetime
         from src.data.models.qa_submission import QASubmission, QAStatus
         
+        config = get_config()
         submission = QASubmission(
             id=None,
             ticket=ticket,
             brand=task.brand,  # Store the code (GSM, VRB, POV)
             asset=asset,
             submitter_id=user_id,
-            submitted_at=datetime.now(),
+            submitted_at=now_in_timezone(config.TIMEZONE),
             message_id=qa_msg.message_id,
             status=QAStatus.PENDING
         )
@@ -2390,9 +2390,7 @@ async def cmd_reviewingqa(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 except Exception as e:
                     logger.warning(f"Failed to get submitter username: {e}")
             
-            # Calculate time elapsed
-            from datetime import datetime
-            time_elapsed = datetime.now() - qa.submitted_at
+            # Calculate time elapsed            time_elapsed = now_in_timezone(config.TIMEZONE) - qa.submitted_at
             hours_elapsed = int(time_elapsed.total_seconds() / 3600)
             
             # Time indicator
@@ -2528,9 +2526,7 @@ async def cmd_pendingqa(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 except Exception as e:
                     logger.warning(f"Failed to get submitter username: {e}")
             
-            # Calculate time elapsed
-            from datetime import datetime
-            time_elapsed = datetime.now() - qa.submitted_at
+            # Calculate time elapsed            time_elapsed = now_in_timezone(config.TIMEZONE) - qa.submitted_at
             hours_elapsed = int(time_elapsed.total_seconds() / 3600)
             
             # Time indicator
@@ -2619,7 +2615,7 @@ async def cmd_unreviewedqa(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pending_submissions = await qa_repo.get_submissions_by_status(QAStatus.PENDING)
         
         # Filter for submissions older than 6 hours
-        six_hours_ago = datetime.now() - timedelta(hours=6)
+        six_hours_ago = now_in_timezone(config.TIMEZONE) - timedelta(hours=6)
         unreviewed = [qa for qa in pending_submissions if qa.submitted_at < six_hours_ago]
         
         # Sort by submission time (oldest first)
@@ -2673,7 +2669,7 @@ async def cmd_unreviewedqa(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     logger.warning(f"Failed to get submitter username: {e}")
             
             # Calculate time elapsed
-            time_elapsed = datetime.now() - qa.submitted_at
+            time_elapsed = now_in_timezone(config.TIMEZONE) - qa.submitted_at
             hours_elapsed = int(time_elapsed.total_seconds() / 3600)
             
             # Time indicator with warning for very old submissions
@@ -3006,9 +3002,9 @@ async def cmd_approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
             task_service = context.bot_data.get('task_service')
             if task_service:
                 from src.data.models.task import TaskState
-                from datetime import datetime
+                config = get_config()
                 await task_service.task_repo.update_task_state(
-                    ticket, TaskState.APPROVED, datetime.now()
+                    ticket, TaskState.APPROVED, now_in_timezone(config.TIMEZONE)
                 )
             
             # Build link to QA message
@@ -3221,9 +3217,9 @@ async def cmd_reject(update: Update, context: ContextTypes.DEFAULT_TYPE):
             task_service = context.bot_data.get('task_service')
             if task_service:
                 from src.data.models.task import TaskState
-                from datetime import datetime
+                config = get_config()
                 await task_service.task_repo.update_task_state(
-                    ticket, TaskState.REJECTED, datetime.now()
+                    ticket, TaskState.REJECTED, now_in_timezone(config.TIMEZONE)
                 )
             
             # Build link to QA message
@@ -3414,9 +3410,9 @@ async def cmd_reopenqa(update: Update, context: ContextTypes.DEFAULT_TYPE):
         task_service = context.bot_data.get('task_service')
         if task_service:
             from src.data.models.task import TaskState
-            from datetime import datetime
+            config = get_config()
             await task_service.task_repo.update_task_state(
-                ticket, TaskState.QA_SUBMITTED, datetime.now()
+                ticket, TaskState.QA_SUBMITTED, now_in_timezone(config.TIMEZONE)
             )
         
         # Build link to QA message
@@ -6642,7 +6638,7 @@ async def cmd_syncdb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # we'll keep only the most recent tasks and assume older ones were deleted
         
         # Keep only tasks from today (most likely to still exist in topic)
-        today = datetime.now().date()
+        today = now_in_timezone(config.TIMEZONE).date()
         today_tasks = [t for t in active_tasks_before if t.created_at.date() == today]
         
         # If user has more than 5 tasks from today, keep only the 5 most recent
@@ -6856,9 +6852,7 @@ async def cmd_resetdb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.warning(f"Failed to delete /resetdb command: {e}")
     
-    try:
-        from datetime import datetime
-        
+    try:        
         # Get all user's tasks from database before reset
         all_user_tasks_before = await task_service.task_repo.get_tasks_by_assignee(user_id)
         active_states = [TaskState.ASSIGNED, TaskState.STARTED, TaskState.QA_SUBMITTED, TaskState.REJECTED]
@@ -7311,9 +7305,7 @@ async def cmd_overduetasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
     
-    try:
-        from datetime import datetime
-        from src.data.models.task import TaskState
+    try:        from src.data.models.task import TaskState
         
         # Get all user's tasks
         all_tasks = await task_service.get_tasks_by_assignee(user_id)
@@ -7325,7 +7317,7 @@ async def cmd_overduetasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if hasattr(task, 'deadline') and task.deadline:
                 try:
                     deadline = datetime.fromisoformat(task.deadline)
-                    if deadline < datetime.now() and task.state not in [TaskState.APPROVED, TaskState.COMPLETED, TaskState.ARCHIVED]:
+                    if deadline < now_in_timezone(config.TIMEZONE) and task.state not in [TaskState.APPROVED, TaskState.COMPLETED, TaskState.ARCHIVED]:
                         overdue_tasks.append(task)
                 except:
                     pass
@@ -7726,7 +7718,7 @@ async def cmd_bulkassign(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await db_adapter.conn.execute("""
                 INSERT INTO task_assignees (ticket, assignee_id, status, assigned_at, is_primary)
                 VALUES (?, ?, ?, ?, ?)
-            """, (ticket, assignee_id, 'ASSIGNED', datetime.now().isoformat(), 1 if is_primary else 0))
+            """, (ticket, assignee_id, 'ASSIGNED', now_in_timezone(config.TIMEZONE).isoformat(), 1 if is_primary else 0))
         
         await db_adapter.conn.commit()
         
@@ -8343,11 +8335,9 @@ async def cmd_meetings(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not meeting_service:
         return
     
-    try:
-        from datetime import datetime
-        
+    try:        
         # Get all upcoming meetings
-        now = datetime.now()
+        now = now_in_timezone(config.TIMEZONE)
         all_meetings = await meeting_service.meeting_repo.get_meetings_after_date(now)
         
         if not all_meetings:
@@ -8578,17 +8568,17 @@ async def cmd_newmeeting(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except Exception as e:
                 logger.warning(f"Could not generate meeting ID: {e}")
                 # Fallback to manual format
-                now = datetime.now()
+                now = now_in_timezone(config.TIMEZONE)
                 year_month = now.strftime("%y%m")
                 meeting_id = f"MTG-{year_month}-XX"
         else:
             # Fallback if service not initialized
-            now = datetime.now()
+            now = now_in_timezone(config.TIMEZONE)
             year_month = now.strftime("%y%m")
             meeting_id = f"MTG-{year_month}-XX"
         
         # Get tomorrow's date as default
-        tomorrow = datetime.now() + timedelta(days=1)
+        tomorrow = now_in_timezone(config.TIMEZONE) + timedelta(days=1)
         default_date = tomorrow.strftime("%Y-%m-%d")
         default_time = "14:00 - 15:30 GMT+6"
         

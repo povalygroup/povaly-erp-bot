@@ -10,6 +10,8 @@ from typing import Optional, List
 from datetime import datetime, date
 
 from src.data.models import (
+from src.utils.time_utils import now_in_timezone
+from src.config import get_config
     Task, TaskState, TaskReaction, RejectFeedback, Archive,
     User, UserRole, QASubmission, QAStatus,
     Attendance, LeaveRequest, LeaveStatus,
@@ -510,7 +512,7 @@ class SQLiteAdapter:
             await self.conn.execute("""
                 INSERT INTO schema_migrations (version, name, applied_at)
                 VALUES (1, 'base_schema', ?)
-            """, (datetime.now().isoformat(),))
+            """, (now_in_timezone(get_config().TIMEZONE).isoformat(),))
             await self.conn.commit()
             logger.info("Base schema initialized as version 1")
     
@@ -619,7 +621,7 @@ class SQLiteAdapter:
     async def update_task_state(self, ticket: str, state: TaskState, timestamp: Optional[datetime] = None):
         """Update task state."""
         if timestamp is None:
-            timestamp = datetime.now()
+            timestamp = now_in_timezone(get_config().TIMEZONE)
         
         # Update appropriate timestamp field based on state
         if state == TaskState.STARTED:
@@ -695,7 +697,7 @@ class SQLiteAdapter:
         else:
             # Add exemption
             if timestamp is None:
-                timestamp = datetime.now()
+                timestamp = now_in_timezone(get_config().TIMEZONE)
             await self.conn.execute("""
                 UPDATE tasks 
                 SET has_fire_exemption = 1, fire_exemption_by = ?, fire_exemption_at = ?
@@ -775,8 +777,8 @@ class SQLiteAdapter:
             user.birth_year, user.birthday_wishes_sent, user.custom_birthday_message,
             user.birthday_reminder_sent,
             user.role.value if isinstance(user.role, UserRole) else user.role,
-            user.created_at.isoformat() if user.created_at else datetime.now().isoformat(),
-            user.last_active.isoformat() if user.last_active else datetime.now().isoformat(),
+            user.created_at.isoformat() if user.created_at else now_in_timezone(get_config().TIMEZONE).isoformat(),
+            user.last_active.isoformat() if user.last_active else now_in_timezone(get_config().TIMEZONE).isoformat(),
             1 if user.is_on_leave else 0,
             user.leave_start.isoformat() if user.leave_start else None,
             user.leave_end.isoformat() if user.leave_end else None,
@@ -875,7 +877,7 @@ class SQLiteAdapter:
     async def get_qa_submissions_older_than(self, hours: int) -> List[QASubmission]:
         """Get QA submissions older than specified hours."""
         from datetime import datetime, timedelta
-        cutoff_time = datetime.now() - timedelta(hours=hours)
+        cutoff_time = now_in_timezone(get_config().TIMEZONE) - timedelta(hours=hours)
         async with self.conn.execute(
             "SELECT * FROM qa_submissions WHERE submitted_at < ? AND status = ?",
             (cutoff_time.isoformat(), QAStatus.PENDING.value)
@@ -1219,7 +1221,7 @@ class SQLiteAdapter:
         fields.append("info_set_by = ?")
         values.append(set_by)
         fields.append("info_updated_at = ?")
-        values.append(datetime.now().isoformat())
+        values.append(now_in_timezone(get_config().TIMEZONE).isoformat())
         
         # Check if info is complete (basic check - can be enhanced)
         if info_dict.get("full_name") and info_dict.get("email") and info_dict.get("phone"):
@@ -1342,7 +1344,7 @@ class SQLiteAdapter:
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             user_id, wish_date, wish_type, custom_message, sent_by_user_id,
-            1 if dm_sent else 0, 1 if group_sent else 0, datetime.now().isoformat()
+            1 if dm_sent else 0, 1 if group_sent else 0, now_in_timezone(get_config().TIMEZONE).isoformat()
         ))
         await self.conn.commit()
     
@@ -1357,7 +1359,7 @@ class SQLiteAdapter:
         """, (
             user_id, reminder_date, birthday_date,
             1 if user_dm_sent else 0, 1 if admin_dm_sent else 0, 1 if group_sent else 0,
-            datetime.now().isoformat()
+            now_in_timezone(get_config().TIMEZONE).isoformat()
         ))
         await self.conn.commit()
     
@@ -1423,7 +1425,7 @@ class SQLiteAdapter:
             await self.conn.execute("""
                 INSERT INTO task_dependencies (ticket, blocked_by_ticket, created_at, created_by)
                 VALUES (?, ?, ?, ?)
-            """, (ticket, blocked_by_ticket, datetime.now().isoformat(), created_by))
+            """, (ticket, blocked_by_ticket, now_in_timezone(get_config().TIMEZONE).isoformat(), created_by))
             await self.conn.commit()
             return True
         except Exception as e:
@@ -1626,7 +1628,7 @@ class SQLiteAdapter:
     async def update_meeting_status(self, meeting_id: str, status, timestamp=None):
         """Update meeting status."""
         if timestamp is None:
-            timestamp = datetime.now()
+            timestamp = now_in_timezone(get_config().TIMEZONE)
         
         status_field = None
         if status.value == 'COMPLETED':

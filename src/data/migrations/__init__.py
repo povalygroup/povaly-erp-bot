@@ -3,6 +3,8 @@
 import logging
 from pathlib import Path
 from importlib import import_module
+from src.utils.time_utils import now_in_timezone
+from src.config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -71,11 +73,9 @@ class MigrationManager:
             if hasattr(module, 'migrate_up'):
                 await module.migrate_up(self.db_adapter)
             
-            # Record migration
-            from datetime import datetime
-            await self.db_adapter.conn.execute(
+            # Record migration            await self.db_adapter.conn.execute(
                 "INSERT INTO migrations (name, applied_at) VALUES (?, ?)",
-                (migration_name, datetime.now().isoformat())
+                (migration_name, now_in_timezone(get_config().TIMEZONE).isoformat())
             )
             await self.db_adapter.conn.commit()
             

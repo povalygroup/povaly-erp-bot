@@ -1,9 +1,9 @@
 """Issue model for Core Operations system."""
 
-from dataclasses import dataclass
-from datetime import datetime
-from typing import Optional, List
+from dataclasses import dataclassfrom typing import Optional, List
 from enum import Enum
+from src.utils.time_utils import now_in_timezone
+from src.config import get_config
 
 
 class IssueStatus(Enum):
@@ -61,7 +61,7 @@ class Issue:
         if self.claimed_by is None:
             self.claimed_by = []
         if self.created_at is None:
-            self.created_at = datetime.now()
+            self.created_at = now_in_timezone(get_config().TIMEZONE)
     
     @property
     def is_claimed(self) -> bool:
@@ -79,7 +79,7 @@ class Issue:
         if self.is_resolved or self.escalation_sent:
             return False
         
-        time_diff = datetime.now() - self.created_at
+        time_diff = now_in_timezone(get_config().TIMEZONE) - self.created_at
         return time_diff.total_seconds() > (hours * 3600)
     
     @property
@@ -93,7 +93,7 @@ class Issue:
             self.claimed_by.append(user_id)
             if self.status == IssueStatus.OPEN:
                 self.status = IssueStatus.IN_PROGRESS
-                self.claimed_at = datetime.now()
+                self.claimed_at = now_in_timezone(get_config().TIMEZONE)
             return True
         return False
     
@@ -117,7 +117,7 @@ class Issue:
         if not self.is_resolved:
             self.status = IssueStatus.RESOLVED
             self.resolved_by = user_id
-            self.resolved_at = datetime.now()
+            self.resolved_at = now_in_timezone(get_config().TIMEZONE)
             return True
         return False
     
@@ -133,7 +133,7 @@ class Issue:
         """Mark issue as escalated."""
         if not self.escalation_sent:
             self.status = IssueStatus.ESCALATED
-            self.escalated_at = datetime.now()
+            self.escalated_at = now_in_timezone(get_config().TIMEZONE)
             self.escalation_sent = True
             return True
         return False

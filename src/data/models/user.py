@@ -5,6 +5,8 @@ from datetime import datetime, date
 from enum import Enum
 from typing import Optional
 import re
+from src.utils.time_utils import now_in_timezone
+from src.config import get_config
 
 
 class UserRole(str, Enum):
@@ -76,7 +78,7 @@ class User:
         """Calculate age if birth year is available."""
         if not self.birth_year:
             return None
-        current_year = datetime.now().year
+        current_year = now_in_timezone(get_config().TIMEZONE).year
         age = current_year - self.birth_year
         # Adjust if birthday hasn't occurred this year yet
         if self.birth_month and self.birth_day:
@@ -238,7 +240,7 @@ class User:
         # Validate year if present
         if len(parts) == 3:
             year = int(parts[2])
-            if not (1900 <= year <= datetime.now().year):
+            if not (1900 <= year <= now_in_timezone(get_config().TIMEZONE).year):
                 return False
         
         return True

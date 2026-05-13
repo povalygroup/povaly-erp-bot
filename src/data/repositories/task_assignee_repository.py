@@ -1,9 +1,9 @@
 """Task Assignee repository for managing multiple assignees per task."""
 
 from typing import List, Optional
-from datetime import datetime
-
 from src.data.models.task import Task, TaskState
+from src.utils.time_utils import now_in_timezone
+from src.config import get_config
 
 
 class TaskAssigneeRepository:
@@ -18,7 +18,7 @@ class TaskAssigneeRepository:
         await self.db.conn.execute("""
             INSERT INTO task_assignees (ticket, assignee_id, status, assigned_at, is_primary)
             VALUES (?, ?, ?, ?, ?)
-        """, (ticket, assignee_id, 'ASSIGNED', datetime.now().isoformat(), 1 if is_primary else 0))
+        """, (ticket, assignee_id, 'ASSIGNED', now_in_timezone(get_config().TIMEZONE).isoformat(), 1 if is_primary else 0))
         await self.db.conn.commit()
     
     async def get_assignees(self, ticket: str) -> List[dict]:
@@ -49,7 +49,7 @@ class TaskAssigneeRepository:
             UPDATE task_assignees 
             SET status = 'ACKNOWLEDGED', acknowledged_at = ?
             WHERE ticket = ? AND assignee_id = ?
-        """, (datetime.now().isoformat(), ticket, assignee_id))
+        """, (now_in_timezone(get_config().TIMEZONE).isoformat(), ticket, assignee_id))
         await self.db.conn.commit()
     
     async def start_task(self, ticket: str, assignee_id: int):
@@ -58,7 +58,7 @@ class TaskAssigneeRepository:
             UPDATE task_assignees 
             SET status = 'IN_PROGRESS', started_at = ?
             WHERE ticket = ? AND assignee_id = ?
-        """, (datetime.now().isoformat(), ticket, assignee_id))
+        """, (now_in_timezone(get_config().TIMEZONE).isoformat(), ticket, assignee_id))
         await self.db.conn.commit()
     
     async def submit_task(self, ticket: str, assignee_id: int):
@@ -67,7 +67,7 @@ class TaskAssigneeRepository:
             UPDATE task_assignees 
             SET status = 'SUBMITTED', submitted_at = ?
             WHERE ticket = ? AND assignee_id = ?
-        """, (datetime.now().isoformat(), ticket, assignee_id))
+        """, (now_in_timezone(get_config().TIMEZONE).isoformat(), ticket, assignee_id))
         await self.db.conn.commit()
     
     async def complete_task(self, ticket: str, assignee_id: int):
@@ -76,7 +76,7 @@ class TaskAssigneeRepository:
             UPDATE task_assignees 
             SET status = 'COMPLETED', completed_at = ?
             WHERE ticket = ? AND assignee_id = ?
-        """, (datetime.now().isoformat(), ticket, assignee_id))
+        """, (now_in_timezone(get_config().TIMEZONE).isoformat(), ticket, assignee_id))
         await self.db.conn.commit()
     
     async def remove_assignee(self, ticket: str, assignee_id: int):

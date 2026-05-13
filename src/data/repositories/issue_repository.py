@@ -5,6 +5,8 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 
 from src.data.models.issue import Issue, IssueStatus, IssuePriority
+from src.utils.time_utils import now_in_timezone
+from src.config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -251,7 +253,7 @@ class IssueRepository:
     async def get_overdue_issues(self, hours: int = 2) -> List[Issue]:
         """Get issues that are overdue for escalation."""
         try:
-            cutoff_time = datetime.now() - timedelta(hours=hours)
+            cutoff_time = now_in_timezone(get_config().TIMEZONE) - timedelta(hours=hours)
             query = """
             SELECT * FROM issues 
             WHERE status != ? AND status != ? 
@@ -276,7 +278,7 @@ class IssueRepository:
     async def get_issues_needing_reminder(self, hours: int = 4) -> List[Issue]:
         """Get claimed issues that need reminder."""
         try:
-            cutoff_time = datetime.now() - timedelta(hours=hours)
+            cutoff_time = now_in_timezone(get_config().TIMEZONE) - timedelta(hours=hours)
             query = """
             SELECT * FROM issues 
             WHERE status = ? 
@@ -327,7 +329,7 @@ class IssueRepository:
             try:
                 created_at = datetime.fromisoformat(row['created_at'])
             except ValueError:
-                created_at = datetime.now()
+                created_at = now_in_timezone(get_config().TIMEZONE)
         
         claimed_at = None
         if row.get('claimed_at'):

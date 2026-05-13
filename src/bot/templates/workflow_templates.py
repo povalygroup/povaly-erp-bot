@@ -7,6 +7,8 @@ You can easily add, modify, or remove features here.
 
 from typing import Dict, List, Optional
 from dataclasses import dataclass
+from src.utils.time_utils import now_in_timezone
+from src.config import get_config
 
 
 @dataclass
@@ -271,7 +273,7 @@ def format_template(workflow: WorkflowTemplate, **kwargs) -> str:
         # Special handling for DEADLINE field - add example
         if field_name == "DEADLINE" and not value:
             # Generate example deadline: today at 10:30 PM
-            example_date = datetime.now()
+            example_date = now_in_timezone(get_config().TIMEZONE)
             example_deadline = example_date.replace(hour=22, minute=30, second=0, microsecond=0)
             value = example_deadline.strftime("%d %b %Y | %I:%M %p GMT+6")
         

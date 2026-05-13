@@ -2,11 +2,11 @@
 
 import logging
 from typing import List, Optional
-from datetime import datetime
-
 from src.data.models.issue import Issue, IssueStatus, IssuePriority
 from src.data.repositories.issue_repository import IssueRepository
 from src.core.parser.issue_parser import IssueParser, IssueData
+from src.config import get_config
+from src.utils.time_utils import now_in_timezone
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ class IssueService:
                 message_id=message_id,
                 topic_id=topic_id,
                 status=IssueStatus.OPEN,
-                created_at=datetime.now()
+                created_at=now_in_timezone(get_config().TIMEZONE)
             )
             
             # Save to database
@@ -191,7 +191,7 @@ class IssueService:
             if issue.is_resolved:
                 logger.info(f"Issue {issue_ticket} already resolved, updating resolver to {user_id}")
                 issue.resolved_by = user_id
-                issue.resolved_at = datetime.now()
+                issue.resolved_at = now_in_timezone(get_config().TIMEZONE)
                 success = await self.repository.update_issue(issue)
                 return success
             

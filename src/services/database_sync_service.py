@@ -6,6 +6,8 @@ from datetime import datetime, timedelta
 from typing import Dict, Set, Optional
 
 from src.data.models.task import TaskState
+from src.utils.time_utils import now_in_timezone
+from src.config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -207,7 +209,7 @@ class DatabaseSyncService:
         try:
             # Don't sync the same user too frequently (max once per 2 minutes for immediate sync)
             last_sync = self.last_sync_per_user.get(user_id)
-            if last_sync and (datetime.now() - last_sync).total_seconds() < 120:
+            if last_sync and (now_in_timezone(get_config().TIMEZONE) - last_sync).total_seconds() < 120:
                 return
             
             # Get expected tickets for this user
@@ -219,7 +221,7 @@ class DatabaseSyncService:
             if removed_count > 0:
                 logger.info(f"Immediate reality sync: Cleaned {removed_count} orphaned tasks for user {user_id}")
             
-            self.last_sync_per_user[user_id] = datetime.now()
+            self.last_sync_per_user[user_id] = now_in_timezone(get_config().TIMEZONE)
                 
         except Exception as e:
             logger.error(f"Error in immediate reality sync for user {user_id}: {e}")
@@ -336,7 +338,7 @@ class DatabaseSyncService:
                 return 0
             
             # Auto-recovery strategy: Keep only recent tasks
-            today = datetime.now().date()
+            today = now_in_timezone(get_config().TIMEZONE).date()
             yesterday = today - timedelta(days=1)
             
             # Keep tasks from today and yesterday (most likely to still exist)

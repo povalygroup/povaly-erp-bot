@@ -1,11 +1,11 @@
 """Automatic ticket ID generator."""
 
 import re
-import logging
-from datetime import datetime
-from typing import Optional
+import loggingfrom typing import Optional
 from src.data.adapters.sqlite_adapter import SQLiteAdapter
 from src.core.brand_mapper import BrandMapper
+from src.utils.time_utils import now_in_timezone
+from src.config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +56,7 @@ class TicketGenerator:
             brand_code = brand_code.ljust(3, 'X')  # Pad with X if needed
         
         # Get current year-month (YYMM format)
-        now = datetime.now()
+        now = now_in_timezone(get_config().TIMEZONE)
         yymm = now.strftime("%y%m")  # e.g., "2604" for April 2026
         
         # Get the highest ticket number for this brand and month

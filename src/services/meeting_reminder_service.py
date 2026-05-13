@@ -9,6 +9,8 @@ from src.data.models import Meeting, MeetingStatus
 from src.data.repositories.meeting_repository import MeetingRepository
 from src.data.repositories.user_repository import UserRepository
 from src.config import Config
+from src.utils.time_utils import now_in_timezone
+from src.config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +84,7 @@ class MeetingReminderService:
         Should be called periodically (every 5 minutes recommended).
         """
         try:
-            current_time = datetime.now()
+            current_time = now_in_timezone(get_config().TIMEZONE)
             
             # Check for 24-hour reminders
             await self._send_reminders_24h(current_time)

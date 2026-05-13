@@ -2,13 +2,13 @@
 
 import asyncio
 import logging
-import re
-from datetime import datetime
-from typing import Dict, List, Set, Optional, Tuple
+import refrom typing import Dict, List, Set, Optional, Tuple
 from dataclasses import dataclass
 
 from src.core.parser.message_parser import MessageParser
 from src.data.models.task import TaskState
+from src.utils.time_utils import now_in_timezone
+from src.config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +76,7 @@ class TopicScannerService:
             
             logger.info(f"✅ Topic scan completed: found {total_tasks} tasks for {total_users} users")
             
-            self.last_scan_time = datetime.now()
+            self.last_scan_time = now_in_timezone(get_config().TIMEZONE)
             return self.topic_tasks.copy()
             
         except Exception as e:

@@ -3,6 +3,8 @@
 import logging
 import asyncio
 from datetime import datetime, time
+from src.utils.time_utils import now_in_timezone
+from src.config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +76,7 @@ class BirthdayScheduler:
         while self.running:
             try:
                 # Calculate seconds until next run
-                now = datetime.now()
+                now = now_in_timezone(get_config().TIMEZONE)
                 target_datetime = datetime.combine(now.date(), target_time)
                 
                 # If target time has passed today, schedule for tomorrow

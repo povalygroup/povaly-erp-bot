@@ -1,7 +1,7 @@
 """Audit Trail repository for tracking all changes."""
 
-from typing import List, Optional
-from datetime import datetime
+from typing import List, Optionalfrom src.utils.time_utils import now_in_timezone
+from src.config import get_config
 
 
 class AuditTrailRepository:
@@ -19,7 +19,7 @@ class AuditTrailRepository:
             INSERT INTO ticket_audit_trail 
             (ticket, action, old_value, new_value, changed_by, changed_at, context)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (ticket, action, old_value, new_value, changed_by, datetime.now().isoformat(), context))
+        """, (ticket, action, old_value, new_value, changed_by, now_in_timezone(get_config().TIMEZONE).isoformat(), context))
         await self.db.conn.commit()
     
     async def get_ticket_history(self, ticket: str) -> List[dict]:

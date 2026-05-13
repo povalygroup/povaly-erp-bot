@@ -1,7 +1,7 @@
 """Helper functions for logging admin alerts."""
 
-import logging
-from datetime import datetime
+import loggingfrom src.utils.time_utils import now_in_timezone
+from src.config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ async def log_admin_alert(db_adapter, message_id: int, topic_id: int, alert_type
             topic_id=topic_id,
             alert_type=alert_type,
             alert_content=alert_content,
-            created_at=datetime.now(),
+            created_at=now_in_timezone(get_config().TIMEZONE),
             acknowledged=False,
             resolved=False
         )

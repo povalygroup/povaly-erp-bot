@@ -1,9 +1,9 @@
 """Task repository for data access."""
 
 from typing import Optional, List
-from datetime import datetime
-
 from src.data.models import Task, TaskState, TaskReaction, RejectFeedback, Archive
+from src.utils.time_utils import now_in_timezone
+from src.config import get_config
 
 
 class TaskRepository:
@@ -57,7 +57,7 @@ class TaskRepository:
             ticket=ticket,
             user_id=user_id,
             reaction=emoji,
-            timestamp=datetime.now(),
+            timestamp=now_in_timezone(get_config().TIMEZONE),
             topic_id=topic_id
         )
         await self.db.insert_reaction(reaction)

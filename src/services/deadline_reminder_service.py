@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from typing import List
 
 from src.data.models.task import Task, TaskState
+from src.utils.time_utils import now_in_timezone
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +90,7 @@ class DeadlineReminderService:
             if not all_tasks:
                 return
             
-            now = datetime.now()
+            now = now_in_timezone(self.config.TIMEZONE)
             
             for task in all_tasks:
                 # Skip tasks without deadline
@@ -118,7 +119,7 @@ class DeadlineReminderService:
         try:
             from src.utils.message_utils import send_auto_delete_dm
             
-            hours_left = (task.deadline - datetime.now()).total_seconds() / 3600
+            hours_left = (task.deadline - now_in_timezone(self.config.TIMEZONE)).total_seconds() / 3600
             
             # Only send if we haven't sent recently (within last hour)
             if hours_left > 24.5 or hours_left < 23.5:
@@ -164,7 +165,7 @@ Please start working on this task if you haven't already!"""
         try:
             from src.utils.message_utils import send_auto_delete_dm
             
-            hours_left = (task.deadline - datetime.now()).total_seconds() / 3600
+            hours_left = (task.deadline - now_in_timezone(self.config.TIMEZONE)).total_seconds() / 3600
             
             # Only send if we haven't sent recently (within last 30 minutes)
             if hours_left > 1.5 or hours_left < 0.5:

@@ -1,12 +1,11 @@
 """Reaction handler for tasks and issues with proper state management."""
 
 import logging
-import asyncio
-from datetime import datetime
-from telegram import Update
+import asynciofrom telegram import Update
 from telegram.ext import ContextTypes, Application
-from src.config import Config
+from src.config import get_config
 from src.data.models.task import TaskState
+from src.utils.time_utils import now_in_timezone
 
 logger = logging.getLogger(__name__)
 
@@ -324,7 +323,7 @@ async def process_task_reactions(task, user_id, added_reactions, removed_reactio
                     # Check if user is the assignee
                     if user_id == task.assignee_id:
                         success = await task_service.state_engine.process_thumbs_up_reaction(
-                            task.ticket, user_id, datetime.now()
+                            task.ticket, user_id, now_in_timezone(get_config().TIMEZONE)
                         )
                         if success:
                             logger.info(f"✅ Task {task.ticket} transitioned to STARTED by {user_id}")
@@ -481,7 +480,7 @@ Have a productive day!""",
                             )
                         else:
                             success = await task_service.state_engine.process_heart_reaction(
-                                task.ticket, user_id, datetime.now()
+                                task.ticket, user_id, now_in_timezone(get_config().TIMEZONE)
                             )
                             if success:
                                 logger.info(f"✅ Task {task.ticket} transitioned to APPROVED by {user_id}")
@@ -514,7 +513,7 @@ Have a productive day!""",
                         
                         # Transition to COMPLETED state
                         await task_service.task_repo.update_task_state(
-                            task.ticket, TaskState.COMPLETED, datetime.now()
+                            task.ticket, TaskState.COMPLETED, now_in_timezone(get_config().TIMEZONE)
                         )
                         logger.info(f"✅ Task {task.ticket} transitioned to COMPLETED state")
                         
@@ -569,7 +568,7 @@ Have a productive day!""",
                     # Check if user is QA reviewer
                     if user_id in config.QA_REVIEWERS:
                         success = await task_service.state_engine.process_thumbs_down_reaction(
-                            task.ticket, user_id, datetime.now()
+                            task.ticket, user_id, now_in_timezone(get_config().TIMEZONE)
                         )
                         if success:
                             logger.info(f"✅ Task {task.ticket} transitioned to REJECTED by {user_id}")
@@ -597,7 +596,7 @@ Have a productive day!""",
                 # Add fire exemption (admin/manager only)
                 if user_id in config.ADMINISTRATORS or user_id in config.MANAGERS:
                     success = await task_service.state_engine.process_fire_reaction(
-                        task.ticket, user_id, datetime.now()
+                        task.ticket, user_id, now_in_timezone(get_config().TIMEZONE)
                     )
                     if success:
                         logger.info(f"🔥 Task {task.ticket} marked with exemption by {user_id}")
@@ -631,14 +630,14 @@ Have a productive day!""",
                     logger.info(f"👍 removed but other reactions added ({added_reactions}) - skipping unclaim notification (reaction change)")
                     # Still revert state since they're no longer "starting" the task
                     await task_service.task_repo.update_task_state(
-                        task.ticket, TaskState.ASSIGNED, datetime.now()
+                        task.ticket, TaskState.ASSIGNED, now_in_timezone(get_config().TIMEZONE)
                     )
                     continue
                 
                 # Revert STARTED → ASSIGNED
                 logger.info(f"↩️ Reverting task {task.ticket} from STARTED to ASSIGNED (unclaimed)")
                 await task_service.task_repo.update_task_state(
-                    task.ticket, TaskState.ASSIGNED, datetime.now()
+                    task.ticket, TaskState.ASSIGNED, now_in_timezone(get_config().TIMEZONE)
                 )
                 
                 # Send DM notification to assignee
@@ -659,7 +658,7 @@ Have a productive day!""",
                 # Revert COMPLETED → APPROVED
                 logger.info(f"↩️ Reverting task {task.ticket} from COMPLETED to APPROVED")
                 await task_service.task_repo.update_task_state(
-                    task.ticket, TaskState.APPROVED, datetime.now()
+                    task.ticket, TaskState.APPROVED, now_in_timezone(get_config().TIMEZONE)
                 )
                 
                 # Send DM notification to assignee
@@ -706,7 +705,7 @@ Have a productive day!""",
                 # Revert REJECTED → QA_SUBMITTED
                 logger.info(f"↩️ Reverting task {task.ticket} from REJECTED to QA_SUBMITTED")
                 await task_service.task_repo.update_task_state(
-                    task.ticket, TaskState.QA_SUBMITTED, datetime.now()
+                    task.ticket, TaskState.QA_SUBMITTED, now_in_timezone(get_config().TIMEZONE)
                 )
                 
                 # Send DM notification to assignee with reviewer name
@@ -973,9 +972,7 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
     - 🔥: Escalation flag (auto-added by system)
     """
     
-    from src.data.models.qa_submission import QAStatus
-    from datetime import datetime
-    
+    from src.data.models.qa_submission import QAStatus    
     # Build message link for warnings
     group_id_str = str(config.TELEGRAM_GROUP_ID)
     if group_id_str.startswith('-100'):
@@ -1065,7 +1062,7 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
                     if task_service:
                         from src.data.models.task import TaskState
                         await task_service.task_repo.update_task_state(
-                            qa_submission.ticket, TaskState.APPROVED, datetime.now()
+                            qa_submission.ticket, TaskState.APPROVED, now_in_timezone(get_config().TIMEZONE)
                         )
                         logger.info(f"✅ Updated task {qa_submission.ticket} state to APPROVED in database")
                     else:
@@ -1126,7 +1123,7 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
                     if task_service:
                         from src.data.models.task import TaskState
                         await task_service.task_repo.update_task_state(
-                            qa_submission.ticket, TaskState.REJECTED, datetime.now()
+                            qa_submission.ticket, TaskState.REJECTED, now_in_timezone(get_config().TIMEZONE)
                         )
                     
                     # Send DM to submitter
@@ -1304,10 +1301,8 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
                     # Update task state back to QA_SUBMITTED
                     task_service = context.bot_data.get('task_service')
                     if task_service:
-                        from src.data.models.task import TaskState
-                        from datetime import datetime
-                        await task_service.task_repo.update_task_state(
-                            latest_qa.ticket, TaskState.QA_SUBMITTED, datetime.now()
+                        from src.data.models.task import TaskState                        await task_service.task_repo.update_task_state(
+                            latest_qa.ticket, TaskState.QA_SUBMITTED, now_in_timezone(get_config().TIMEZONE)
                         )
                         logger.info(f"✅ Updated task {latest_qa.ticket} state back to QA_SUBMITTED")
                     
@@ -1360,10 +1355,8 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
                     # Update task state back to QA_SUBMITTED
                     task_service = context.bot_data.get('task_service')
                     if task_service:
-                        from src.data.models.task import TaskState
-                        from datetime import datetime
-                        await task_service.task_repo.update_task_state(
-                            latest_qa.ticket, TaskState.QA_SUBMITTED, datetime.now()
+                        from src.data.models.task import TaskState                        await task_service.task_repo.update_task_state(
+                            latest_qa.ticket, TaskState.QA_SUBMITTED, now_in_timezone(get_config().TIMEZONE)
                         )
                         logger.info(f"✅ Updated task {latest_qa.ticket} state back to QA_SUBMITTED")
                     

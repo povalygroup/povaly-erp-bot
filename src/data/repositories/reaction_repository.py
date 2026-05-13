@@ -1,7 +1,7 @@
 """Reaction repository for tracking all reactions."""
 
-from typing import List, Optional
-from datetime import datetime
+from typing import List, Optionalfrom src.utils.time_utils import now_in_timezone
+from src.config import get_config
 
 
 class ReactionRepository:
@@ -18,7 +18,7 @@ class ReactionRepository:
         await self.db.conn.execute("""
             INSERT INTO task_reactions (ticket, message_id, reaction, user_id, context, reacted_at)
             VALUES (?, ?, ?, ?, ?, ?)
-        """, (ticket, message_id, reaction, user_id, context, datetime.now().isoformat()))
+        """, (ticket, message_id, reaction, user_id, context, now_in_timezone(get_config().TIMEZONE).isoformat()))
         await self.db.conn.commit()
     
     async def get_task_reactions(self, ticket: str) -> List[dict]:
@@ -42,7 +42,7 @@ class ReactionRepository:
         await self.db.conn.execute("""
             INSERT INTO issue_reactions (issue_id, message_id, reaction, user_id, context, reacted_at)
             VALUES (?, ?, ?, ?, ?, ?)
-        """, (issue_id, message_id, reaction, user_id, context, datetime.now().isoformat()))
+        """, (issue_id, message_id, reaction, user_id, context, now_in_timezone(get_config().TIMEZONE).isoformat()))
         await self.db.conn.commit()
     
     async def get_issue_reactions(self, issue_id: int) -> List[dict]:
@@ -66,7 +66,7 @@ class ReactionRepository:
         await self.db.conn.execute("""
             INSERT INTO qa_reactions (qa_submission_id, message_id, reaction, user_id, context, reacted_at)
             VALUES (?, ?, ?, ?, ?, ?)
-        """, (qa_submission_id, message_id, reaction, user_id, context, datetime.now().isoformat()))
+        """, (qa_submission_id, message_id, reaction, user_id, context, now_in_timezone(get_config().TIMEZONE).isoformat()))
         await self.db.conn.commit()
     
     async def get_qa_reactions(self, qa_submission_id: int) -> List[dict]:
@@ -90,7 +90,7 @@ class ReactionRepository:
             UPDATE task_reactions 
             SET removed_at = ?
             WHERE ticket = ? AND reaction = ? AND user_id = ? AND removed_at IS NULL
-        """, (datetime.now().isoformat(), ticket, reaction, user_id))
+        """, (now_in_timezone(get_config().TIMEZONE).isoformat(), ticket, reaction, user_id))
         await self.db.conn.commit()
     
     async def remove_issue_reaction(self, issue_id: int, reaction: str, user_id: int):
@@ -99,7 +99,7 @@ class ReactionRepository:
             UPDATE issue_reactions 
             SET removed_at = ?
             WHERE issue_id = ? AND reaction = ? AND user_id = ? AND removed_at IS NULL
-        """, (datetime.now().isoformat(), issue_id, reaction, user_id))
+        """, (now_in_timezone(get_config().TIMEZONE).isoformat(), issue_id, reaction, user_id))
         await self.db.conn.commit()
     
     async def remove_qa_reaction(self, qa_submission_id: int, reaction: str, user_id: int):
@@ -108,5 +108,5 @@ class ReactionRepository:
             UPDATE qa_reactions 
             SET removed_at = ?
             WHERE qa_submission_id = ? AND reaction = ? AND user_id = ? AND removed_at IS NULL
-        """, (datetime.now().isoformat(), qa_submission_id, reaction, user_id))
+        """, (now_in_timezone(get_config().TIMEZONE).isoformat(), qa_submission_id, reaction, user_id))
         await self.db.conn.commit()

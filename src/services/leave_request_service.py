@@ -5,6 +5,7 @@ from datetime import datetime, date, timedelta
 from typing import Optional, List, Tuple
 from src.data.models.leave_request import LeaveRequest, LeaveStatus
 from src.data.models.task import TaskState
+from src.utils.time_utils import now_in_timezone
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +74,7 @@ class LeaveRequestService:
                 end_date=end_date,
                 reason=reason,
                 status=LeaveStatus.PENDING,
-                requested_at=datetime.now(),
+                requested_at=now_in_timezone(self.config.TIMEZONE),
                 message_id=message_id,
                 replacement_user_id=replacement_user_id,
                 task_handover_ids=None,
@@ -113,7 +114,7 @@ class LeaveRequestService:
                 request_id,
                 LeaveStatus.APPROVED,
                 reviewed_by,
-                datetime.now()
+                now_in_timezone(self.config.TIMEZONE)
             )
             
             # Mark user as on leave
@@ -162,7 +163,7 @@ class LeaveRequestService:
                 request_id,
                 LeaveStatus.REJECTED,
                 reviewed_by,
-                datetime.now()
+                now_in_timezone(self.config.TIMEZONE)
             )
             
             logger.info(f"✅ Rejected leave request {request_id} for user {leave_request.user_id}")

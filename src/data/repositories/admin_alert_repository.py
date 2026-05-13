@@ -5,6 +5,8 @@ from datetime import datetime, date
 from typing import List, Optional
 
 from src.data.models.admin_alert import AdminAlert
+from src.utils.time_utils import now_in_timezone
+from src.config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +94,7 @@ class AdminAlertRepository:
                 WHERE message_id = ?
             """
             
-            await self.db.execute(query, (datetime.now(), user_id, message_id))
+            await self.db.execute(query, (now_in_timezone(get_config().TIMEZONE), user_id, message_id))
             logger.info(f"Marked alert {message_id} as acknowledged by user {user_id}")
             return True
             
@@ -111,7 +113,7 @@ class AdminAlertRepository:
                 WHERE message_id = ?
             """
             
-            await self.db.execute(query, (datetime.now(), user_id, message_id))
+            await self.db.execute(query, (now_in_timezone(get_config().TIMEZONE), user_id, message_id))
             logger.info(f"Marked alert {message_id} as resolved by user {user_id}")
             return True
             

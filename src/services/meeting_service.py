@@ -14,7 +14,8 @@ from src.data.models import (
 )
 from src.data.repositories.meeting_repository import MeetingRepository
 from src.data.repositories.user_repository import UserRepository
-from src.config import Config
+from src.config import get_config
+from src.utils.time_utils import now_in_timezone
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ class MeetingService:
         Generate unique meeting ID in format: MTG-YYMM-XX
         Example: MTG-2605-01, MTG-2605-02, etc.
         """
-        now = datetime.now()
+        now = now_in_timezone(self.config.TIMEZONE)
         year_month = now.strftime("%y%m")  # e.g., "2605" for May 2026
         
         # Get all meetings from this month
@@ -139,7 +140,7 @@ class MeetingService:
             agenda=agenda,
             priority=priority,
             status=MeetingStatus.SCHEDULED,
-            created_at=datetime.now(),
+            created_at=now_in_timezone(self.config.TIMEZONE),
             message_id=message_id,
             topic_id=topic_id,
             preparation=preparation
@@ -154,7 +155,7 @@ class MeetingService:
             await self.meeting_repo.add_attendees(
                 meeting_id=meeting_id,
                 user_ids=attendee_ids,
-                invited_at=datetime.now()
+                invited_at=now_in_timezone(self.config.TIMEZONE)
             )
             logger.info(f"✅ Added {len(attendee_ids)} attendees to meeting {meeting_id}")
             
@@ -219,7 +220,7 @@ class MeetingService:
                 meeting_id=meeting_id,
                 user_id=user_id,
                 status=status,
-                responded_at=datetime.now()
+                responded_at=now_in_timezone(self.config.TIMEZONE)
             )
             
             # Record reaction
@@ -228,7 +229,7 @@ class MeetingService:
                 message_id=message_id,
                 user_id=user_id,
                 reaction=reaction,
-                timestamp=datetime.now()
+                timestamp=now_in_timezone(self.config.TIMEZONE)
             )
             
             logger.info(f"✅ Updated RSVP for user {user_id} to {status.value}")
@@ -279,7 +280,7 @@ class MeetingService:
                 id=None,
                 meeting_id=meeting_id,
                 posted_by=posted_by,
-                posted_at=datetime.now(),
+                posted_at=now_in_timezone(self.config.TIMEZONE),
                 message_id=message_id,
                 attendees_present=attendees_present,
                 decisions=decisions,
@@ -297,7 +298,7 @@ class MeetingService:
             await self.meeting_repo.update_meeting_status(
                 meeting_id=meeting_id,
                 status=MeetingStatus.COMPLETED,
-                timestamp=datetime.now()
+                timestamp=now_in_timezone(self.config.TIMEZONE)
             )
             
             logger.info(f"✅ Posted meeting notes for {meeting_id}")
@@ -341,7 +342,7 @@ class MeetingService:
             await self.meeting_repo.cancel_meeting(
                 meeting_id=meeting_id,
                 reason=reason,
-                cancelled_at=datetime.now()
+                cancelled_at=now_in_timezone(self.config.TIMEZONE)
             )
             
             logger.info(f"✅ Cancelled meeting {meeting_id}")
@@ -357,7 +358,7 @@ class MeetingService:
     
     async def get_user_upcoming_meetings(self, user_id: int) -> List[Meeting]:
         """Get user's upcoming meetings."""
-        now = datetime.now()
+        now = now_in_timezone(self.config.TIMEZONE)
         meetings = await self.meeting_repo.get_user_meetings(user_id, after_date=now)
         
         # Filter to only scheduled meetings
