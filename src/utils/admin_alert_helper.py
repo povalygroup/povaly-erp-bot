@@ -1,6 +1,7 @@
 """Helper functions for logging admin alerts."""
 
-import loggingfrom src.utils.time_utils import now_in_timezone
+import logging
+from src.utils.time_utils import now_in_timezone
 from src.config import get_config
 
 logger = logging.getLogger(__name__)

@@ -1,7 +1,8 @@
 """Automatic ticket ID generator."""
 
 import re
-import loggingfrom typing import Optional
+import logging
+from typing import Optional
 from src.data.adapters.sqlite_adapter import SQLiteAdapter
 from src.core.brand_mapper import BrandMapper
 from src.utils.time_utils import now_in_timezone

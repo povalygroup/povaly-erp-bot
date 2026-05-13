@@ -1,7 +1,8 @@
 """Reaction handler for tasks and issues with proper state management."""
 
 import logging
-import asynciofrom telegram import Update
+import asyncio
+from telegram import Update
 from telegram.ext import ContextTypes, Application
 from src.config import get_config
 from src.data.models.task import TaskState
