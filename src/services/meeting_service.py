@@ -14,7 +14,7 @@ from src.data.models import (
 )
 from src.data.repositories.meeting_repository import MeetingRepository
 from src.data.repositories.user_repository import UserRepository
-from src.config import get_config
+from src.config import get_config, Config
 from src.utils.time_utils import now_in_timezone
 
 logger = logging.getLogger(__name__)
