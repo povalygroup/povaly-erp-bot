@@ -347,7 +347,8 @@ async def process_task_reactions(task, user_id, added_reactions, removed_reactio
                                 
                                 if not existing_attendance:
                                     # Create attendance record
-                                    now = datetime.now()
+                                    from src.utils.time_utils import now_in_timezone
+                                    now = now_in_timezone(config.TIMEZONE)
                                     
                                     # Check if late (after 10:00 AM)
                                     late_time = now.replace(hour=10, minute=0, second=0, microsecond=0)

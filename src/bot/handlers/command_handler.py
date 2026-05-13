@@ -5599,7 +5599,8 @@ async def cmd_checkin(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         
         # Create attendance record
-        now = datetime.now()
+        from src.utils.time_utils import now_in_timezone
+        now = now_in_timezone(config.TIMEZONE)
         
         # Check if late (after 10:00 AM)
         late_time = now.replace(hour=10, minute=0, second=0, microsecond=0)
@@ -5710,7 +5711,8 @@ async def cmd_checkout(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         
         # Update checkout time
-        now = datetime.now()
+        from src.utils.time_utils import now_in_timezone
+        now = now_in_timezone(config.TIMEZONE)
         await attendance_repo.update_checkout(user_id, today, now, is_auto=False)
         
         # Calculate total hours
@@ -6103,7 +6105,8 @@ async def cmd_break(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         
         # Create break record
-        now = datetime.now()
+        from src.utils.time_utils import now_in_timezone
+        now = now_in_timezone(config.TIMEZONE)
         break_record = BreakRecord(
             id=None,
             user_id=user_id,
@@ -6191,7 +6194,8 @@ async def cmd_recheckin(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         
         # End break
-        now = datetime.now()
+        from src.utils.time_utils import now_in_timezone
+        now = now_in_timezone(config.TIMEZONE)
         await db_adapter.update_break_end(active_break.id, now)
         
         # Calculate duration
