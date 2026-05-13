@@ -4,7 +4,7 @@ import logging
 import asyncio
 from telegram import Update
 from telegram.ext import ContextTypes, Application
-from src.config import get_config
+from src.config import get_config, Config
 from src.data.models.task import TaskState
 from src.utils.time_utils import now_in_timezone
 
