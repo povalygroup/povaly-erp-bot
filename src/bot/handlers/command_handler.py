@@ -7,7 +7,7 @@ from datetime import datetime, date, timedelta
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQueryHandler
 
-from src.config import get_config
+from src.config import get_config, Config
 from src.core.brand_mapper import BrandMapper
 from src.data.models.task import TaskState
 from src.utils.time_utils import now_in_timezone
