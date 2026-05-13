@@ -24,6 +24,9 @@ pass: ssh password
 # Navigate to folder
 cd ~/povaly-bot
 
+# Pull from github (if applicable)
+git pull origin main
+
 # Check bot status
 sudo systemctl status telegram-bot
 
