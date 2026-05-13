@@ -1302,7 +1302,8 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
                     # Update task state back to QA_SUBMITTED
                     task_service = context.bot_data.get('task_service')
                     if task_service:
-                        from src.data.models.task import TaskState                        await task_service.task_repo.update_task_state(
+                        from src.data.models.task import TaskState
+                        await task_service.task_repo.update_task_state(
                             latest_qa.ticket, TaskState.QA_SUBMITTED, now_in_timezone(get_config().TIMEZONE)
                         )
                         logger.info(f"✅ Updated task {latest_qa.ticket} state back to QA_SUBMITTED")
@@ -1356,7 +1357,8 @@ async def process_qa_reactions(qa_submission, user_id, added_reactions, removed_
                     # Update task state back to QA_SUBMITTED
                     task_service = context.bot_data.get('task_service')
                     if task_service:
-                        from src.data.models.task import TaskState                        await task_service.task_repo.update_task_state(
+                        from src.data.models.task import TaskState
+                        await task_service.task_repo.update_task_state(
                             latest_qa.ticket, TaskState.QA_SUBMITTED, now_in_timezone(get_config().TIMEZONE)
                         )
                         logger.info(f"✅ Updated task {latest_qa.ticket} state back to QA_SUBMITTED")
