@@ -73,7 +73,8 @@ class MigrationManager:
             if hasattr(module, 'migrate_up'):
                 await module.migrate_up(self.db_adapter)
             
-            # Record migration            await self.db_adapter.conn.execute(
+            # Record migration
+            await self.db_adapter.conn.execute(
                 "INSERT INTO migrations (name, applied_at) VALUES (?, ?)",
                 (migration_name, now_in_timezone(get_config().TIMEZONE).isoformat())
             )
