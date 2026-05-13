@@ -1,5 +1,3 @@
-# Copy this entire content to: src/data/adapters/sqlite_adapter.py
-
 """SQLite database adapter implementation."""
 
 import aiosqlite
@@ -10,14 +8,14 @@ from typing import Optional, List
 from datetime import datetime, date
 
 from src.data.models import (
-from src.utils.time_utils import now_in_timezone
-from src.config import get_config
     Task, TaskState, TaskReaction, RejectFeedback, Archive,
     User, UserRole, QASubmission, QAStatus,
     Attendance, LeaveRequest, LeaveStatus,
     Report, ReportType, Violation, ViolationType,
     AuditTrail, EventType
 )
+from src.utils.time_utils import now_in_timezone
+from src.config import get_config
 
 logger = logging.getLogger(__name__)
 
